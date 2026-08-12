@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>경사 하강법 — 지그재그(진동)를 중심으로</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb;
+  --page:#f9f9f7;
+  --text-primary:#0b0b0b;
+  --text-secondary:#52514e;
+  --muted:#898781;
+  --grid:#e1e0d9;
+  --axis:#c3c2b7;
+  --border:rgba(11,11,11,0.10);
+  --s1:#2a78d6;   /* GD */
+  --s2:#eb6834;   /* Momentum */
+  --s3:#1baf7a;   /* Adam / 정규화 */
+  --s8:#e34948;   /* 발산 / 경고 */
+  --warn:#fab219;
+  --good:#0ca30c;
+  --wash:rgba(42,120,214,0.08);
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19;
+  --page:#0d0d0d;
+  --text-primary:#ffffff;
+  --text-secondary:#c3c2b7;
+  --muted:#898781;
+  --grid:#2c2c2a;
+  --axis:#383835;
+  --border:rgba(255,255,255,0.10);
+  --s1:#3987e5;
+  --s2:#d95926;
+  --s3:#199e70;
+  --s8:#e66767;
+  --warn:#fab219;
+  --good:#0ca30c;
+  --wash:rgba(57,135,229,0.14);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--page); color:var(--text-primary);
+  font-family:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:16px; line-height:1.75; letter-spacing:-0.01em;
+}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px 120px}
+header.hero{padding:56px 0 28px;border-bottom:1px solid var(--border);margin-bottom:8px}
+h1{font-size:clamp(28px,5.2vw,42px);line-height:1.25;margin:0 0 12px;letter-spacing:-0.03em}
+.sub{color:var(--text-secondary);font-size:17px;margin:0}
+.kicker{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px}
+h2{font-size:clamp(21px,3.4vw,27px);margin:56px 0 6px;letter-spacing:-0.02em;line-height:1.3}
+h3{font-size:18px;margin:34px 0 6px;letter-spacing:-0.015em}
+h4{font-size:15px;margin:22px 0 4px;color:var(--text-secondary)}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:650}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.9em;background:var(--wash);padding:1px 5px;border-radius:4px}
+a{color:var(--s1)}
+
+/* ---- level badges ---- */
+.lv{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
+  letter-spacing:0.06em;padding:4px 11px;border-radius:999px;border:1px solid var(--border);
+  color:var(--text-secondary);background:var(--surface-1);margin-bottom:2px}
+.lv .dot{width:8px;height:8px;border-radius:50%}
+.lv1 .dot{background:var(--s3)} .lv2 .dot{background:var(--s1)} .lv3 .dot{background:var(--s2)}
+
+/* ---- cards ---- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px;margin:22px 0}
+.demo{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:18px;margin:24px 0}
+.demo h4{margin:0 0 2px;font-size:15px;color:var(--text-primary);font-weight:650}
+.demo .cap{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.6}
+canvas{display:block;width:100%;border-radius:8px;background:var(--surface-1);touch-action:none}
+
+/* ---- controls ---- */
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 22px;margin:14px 0 4px;align-items:flex-end}
+.ctrl{flex:1 1 210px;min-width:180px}
+.ctrl label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--text-secondary);margin-bottom:4px;gap:10px}
+.ctrl label b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:650;font-size:13px}
+input[type=range]{width:100%;accent-color:var(--s1);height:22px;margin:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+button{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);transition:background .12s}
+button:hover{background:var(--wash)}
+button.primary{background:var(--s1);border-color:var(--s1);color:#fff}
+button.primary:hover{filter:brightness(1.07)}
+button[aria-pressed=true]{background:var(--wash);border-color:var(--s1)}
+
+/* ---- legend ---- */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--text-secondary);margin:10px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+
+/* ---- status pill ---- */
+.status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:650;
+  padding:5px 12px;border-radius:999px;border:1px solid var(--border);margin-top:12px}
+.status .ico{font-size:14px;line-height:1}
+
+/* ---- readout ---- */
+.readout{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:12px;font-size:13px;color:var(--text-secondary)}
+.readout b{display:block;font-size:19px;color:var(--text-primary);font-weight:650;line-height:1.3;letter-spacing:-0.02em}
+
+/* ---- math ---- */
+.math{font-family:"Cambria Math","Latin Modern Math",Georgia,"Times New Roman",serif;
+  font-style:italic;font-size:1.06em;letter-spacing:0}
+.math .op,.math .num{font-style:normal}
+.eq{background:var(--surface-1);border:1px solid var(--border);border-left:3px solid var(--s1);
+  border-radius:0 10px 10px 0;padding:16px 18px 14px;margin:18px 0;overflow-x:auto;text-align:center;line-height:1.9}
+.eq .note{display:block;font-family:system-ui,sans-serif;font-style:normal;font-size:12.5px;
+  color:var(--muted);margin:6px 0 0;padding:0;border:0;line-height:1.55}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .22em;line-height:1.2}
+.frac .n{border-bottom:1.2px solid currentColor;padding:0 .35em 1px}
+.frac .d{padding:1px .35em 0}
+.rt{white-space:nowrap}
+.rt::before{content:'\221A';font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-style:normal;font-size:1em;vertical-align:-.02em}
+.rt>span{border-top:1.05px solid currentColor;padding:0 .16em 0 .05em;margin-left:-.04em}
+sub,sup{font-size:0.72em;font-style:normal}
+
+/* ---- tables ---- */
+.tw{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface-1)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-weight:650;font-size:12.5px;color:var(--text-secondary);letter-spacing:0.02em;background:var(--page)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-variant-numeric:tabular-nums;text-align:right}
+tr.hi td{background:var(--wash)}
+tr.hi td:first-child{box-shadow:inset 3px 0 0 var(--s1)}
+
+/* ---- callouts ---- */
+.note{border-left:3px solid var(--axis);padding:2px 0 2px 16px;margin:18px 0;color:var(--text-secondary);font-size:14.5px}
+.key{border:1px solid var(--border);border-left:3px solid var(--s2);background:var(--surface-1);
+  border-radius:0 10px 10px 0;padding:14px 18px;margin:20px 0}
+.key .lbl{font-size:11.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--s2);display:block;margin-bottom:4px}
+.key p{margin:0}
+
+/* ---- toc ---- */
+nav.toc{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin:26px 0}
+nav.toc ol{margin:6px 0 0;padding-left:20px;font-size:14.5px}
+nav.toc a{text-decoration:none;color:var(--text-primary)}
+nav.toc a:hover{color:var(--s1)}
+nav.toc .lvtag{color:var(--muted);font-size:12px;margin-left:6px}
+
+/* ---- theme toggle ---- */
+.tog{position:fixed;top:14px;right:14px;z-index:10;border-radius:999px;padding:7px 13px;
+  background:var(--surface-1);border:1px solid var(--border);font-size:12.5px}
+@media print{.tog{display:none}}
+footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<button class="tog" id="themeBtn" type="button">◐ 다크</button>
+<div class="wrap">
+
+<header class="hero">
+  <p class="kicker">기계학습 기초 · 최적화</p>
+  <h1>경사 하강법과 지그재그 현상</h1>
+  <p class="sub">직관에서 출발해 고윳값 분해와 모멘텀 이론까지, 단계적으로 깊어지는 인터랙티브 학습자료. “왜 학습이 골짜기를 튕기며 갈까?”라는 하나의 질문을 세 가지 깊이로 답합니다.</p>
+</header>
+
+<nav class="toc">
+  <strong>학습 경로</strong>
+  <ol>
+    <li><a href="#l1">언덕 내려가기 — 경사 하강법의 정의</a><span class="lvtag">입문</span></li>
+    <li><a href="#lr">학습률 하나로 갈리는 네 가지 운명</a><span class="lvtag">입문</span></li>
+    <li><a href="#l2">골짜기와 지그재그</a><span class="lvtag">학부</span></li>
+    <li><a href="#why">지그재그는 왜 생기는가 — 축별 분해</a><span class="lvtag">학부</span></li>
+    <li><a href="#kappa">조건수 κ, 그리고 학습률의 딜레마</a><span class="lvtag">학부</span></li>
+    <li><a href="#l3">최적 학습률과 수렴 속도의 한계</a><span class="lvtag">심화</span></li>
+    <li><a href="#fix">처방 다섯 가지 — 정규화·모멘텀·적응·2차·스케줄</a><span class="lvtag">심화</span></li>
+    <li><a href="#cmp">비교 실험실 · 진단 가이드</a><span class="lvtag">종합</span></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════════ LEVEL 1 ═══════════════════════ -->
+<h2 id="l1"><span class="lv lv1"><span class="dot"></span>LEVEL 1 · 입문</span><br>언덕 내려가기</h2>
+
+<p>짙은 안개 속 산비탈에 서 있다고 상상해 봅시다. 목표는 골짜기 바닥에 도달하는 것인데, 보이는 것은 발밑 경사뿐입니다. 합리적인 전략은 하나입니다. <strong>가장 가파르게 내려가는 방향으로 한 걸음 딛고, 다시 발밑을 확인한다.</strong> 이것이 경사 하강법의 전부입니다.</p>
+
+<p>기계학습에서 “산의 높이”는 모델이 틀린 정도, 즉 <strong>손실 함수</strong> <span class="math">L</span>이고, “내가 선 위치”는 모델의 <strong>파라미터</strong> <span class="math">w</span>입니다. 발밑 경사는 미분값 <span class="math">L′(w)</span>입니다.</p>
+
+<div class="eq">
+<span class="math">w<sub>k+1</sub> <span class="op">=</span> w<sub>k</sub> <span class="op">−</span> η · L′(w<sub>k</sub>)</span>
+<span class="note">η(eta) = 학습률(learning rate), 한 걸음의 크기 · k = 반복 횟수</span>
+</div>
+
+<p>기울기 앞에 붙은 <strong>마이너스 부호</strong>가 핵심입니다. 기울기는 “올라가는 방향”을 가리키므로, 반대로 가야 내려갑니다. 기울기가 가파르면 크게, 평평하면 작게 움직이므로 바닥 근처에서는 저절로 조심스러워집니다.</p>
+
+<div class="key"><span class="lbl">한 문장 요약</span><p>경사 하강법 = <strong>지금 위치의 기울기 반대 방향으로, 학습률만큼 이동하기를 반복</strong>. 알고리즘은 세 줄이지만, 잘 작동시키는 일은 전적으로 η에 달려 있습니다.</p></div>
+
+<!-- ── 1D DEMO ── -->
+<h2 id="lr">학습률 하나로 갈리는 네 가지 운명</h2>
+
+<p>가장 단순한 그릇 <span class="math">L(w) <span class="op">=</span> w<sup>2</sup></span>을 봅시다. 기울기는 <span class="math">2w</span>이므로 갱신식은 아래처럼 <em>곱셈</em> 한 번으로 정리됩니다. 이 한 줄이 뒤에 나올 모든 이야기의 씨앗입니다.</p>
+
+<div class="eq">
+<span class="math">w<sub>k+1</sub> <span class="op">=</span> w<sub>k</sub> <span class="op">−</span> η·2w<sub>k</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> <span class="num">2</span>η) w<sub>k</sub></span>
+<span class="note">매 반복마다 위치에 (1 − 2η)가 곱해진다 → 이 값의 부호와 크기가 모든 것을 결정한다</span>
+</div>
+
+<div class="demo">
+  <h4>데모 1 — 학습률 슬라이더</h4>
+  <p class="cap">η를 움직이며 파란 점이 바닥으로 가는 경로를 관찰하세요. 0.5를 넘는 순간 점이 <strong>반대편으로 뛰어넘기</strong> 시작합니다.</p>
+  <canvas id="c1" height="300"></canvas>
+  <div class="ctrls">
+    <div class="ctrl">
+      <label for="s1lr">학습률 η <b id="v1lr">0.100</b></label>
+      <input type="range" id="s1lr" min="0.01" max="1.15" step="0.005" value="0.1">
+    </div>
+    <div class="ctrl">
+      <label for="s1n">보여줄 반복 수 <b id="v1n">12</b></label>
+      <input type="range" id="s1n" min="1" max="30" step="1" value="12">
+    </div>
+  </div>
+  <div class="btns">
+    <button type="button" data-lr="0.05">너무 작게 (0.05)</button>
+    <button type="button" data-lr="0.35">적당히 (0.35)</button>
+    <button type="button" data-lr="0.75">진동 (0.75)</button>
+    <button type="button" data-lr="1.08">발산 (1.08)</button>
+  </div>
+  <div id="st1" class="status"></div>
+  <div class="readout">
+    <div>배율 (1−2η)<b id="r1f">0.800</b></div>
+    <div>최종 |w|<b id="r1w">—</b></div>
+    <div>10⁻³ 도달까지<b id="r1k">—</b></div>
+  </div>
+</div>
+
+<p>실험해 보면 η의 값에 따라 완전히 다른 <strong>네 개의 체제(regime)</strong>가 나타납니다. 배율 <span class="math">r <span class="op">=</span> <span class="num">1</span> <span class="op">−</span> <span class="num">2</span>η</span>의 부호와 절댓값만 보면 됩니다.</p>
+
+<div class="tw">
+<table id="regime">
+<thead><tr><th>학습률 범위</th><th>배율 r = 1−2η</th><th>행동</th><th>비유</th></tr></thead>
+<tbody>
+<tr data-lo="0" data-hi="0.5"><td><span class="math">0 &lt; η &lt; 0.5</span></td><td><span class="math">0 &lt; r &lt; 1</span></td><td><strong>단조 수렴</strong> — 한쪽에서만 접근, 부호 유지</td><td>조심스레 걸어 내려감</td></tr>
+<tr data-lo="0.5" data-hi="1"><td><span class="math">0.5 &lt; η &lt; 1</span></td><td><span class="math">−1 &lt; r &lt; 0</span></td><td><strong>진동하며 수렴</strong> — 매번 반대편으로 넘어가되 진폭은 줄어듦</td><td>좌우로 튕기며 가라앉음</td></tr>
+<tr data-lo="1" data-hi="1.0001"><td><span class="math">η = 1</span></td><td><span class="math">r = −1</span></td><td><strong>영구 순환</strong> — 두 점 사이를 영원히 왕복</td><td>제자리 진자 운동</td></tr>
+<tr data-lo="1.0001" data-hi="99"><td><span class="math">η &gt; 1</span></td><td><span class="math">|r| &gt; 1</span></td><td><strong>발산</strong> — 진폭이 커지며 튕겨 나감</td><td>골짜기 밖으로 날아감</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key"><span class="lbl">첫 번째 통찰</span><p>진동은 학습률이 <em>조금 큰</em> 상태, 발산은 <em>많이 큰</em> 상태입니다. 둘은 종류가 다른 고장이 아니라 <strong>같은 축 위의 정도 차이</strong>입니다. 그래서 손실 곡선이 톱니처럼 흔들리기 시작하면 “곧 터질 수도 있다”는 조기 경보로 읽어야 합니다.</p></div>
+
+<p>일반적인 함수에서는 <span class="math">2</span> 대신 곡률(2계 미분) <span class="math">L</span>이 들어가, 수렴 조건이 <span class="math">η &lt; <span class="num">2</span>/L</span>이 됩니다. 즉 <strong>가장 가파르게 휘는 곳의 곡률이 학습률의 상한을 정합니다.</strong> 이 사실이 다음 장의 지그재그를 낳습니다.</p>
+
+<!-- ═══════════════════════ LEVEL 2 ═══════════════════════ -->
+<h2 id="l2"><span class="lv lv2"><span class="dot"></span>LEVEL 2 · 학부</span><br>골짜기와 지그재그</h2>
+
+<p>파라미터가 여럿이면 미분은 <strong>그래디언트</strong>(편미분 벡터) <span class="math">∇L</span>이 되고, 갱신식의 모양은 그대로입니다.</p>
+
+<div class="eq">
+<span class="math"><b>w</b><sub>k+1</sub> <span class="op">=</span> <b>w</b><sub>k</sub> <span class="op">−</span> η ∇L(<b>w</b><sub>k</sub>)</span>,&nbsp;&nbsp;
+<span class="math">∇L <span class="op">=</span> (∂L/∂w<sub>1</sub>, …, ∂L/∂w<sub>n</sub>)</span>
+<span class="note">∇L은 등고선에 항상 <strong>수직</strong>이며 가장 가파른 상승 방향을 가리킨다</span>
+</div>
+
+<p>여기서 결정적인 사실이 하나 있습니다. <strong>“가장 가파른 방향”은 “최솟값을 향하는 방향”이 아닙니다.</strong> 등고선이 동그란 그릇이면 둘이 일치하지만, 길쭉한 <em>골짜기</em> 모양이면 그래디언트는 골짜기 바닥을 따라가는 대신 <strong>양쪽 벽을 향해</strong> 거의 수직으로 서게 됩니다. 그 결과가 지그재그입니다.</p>
+
+<p>아래 지형은 <span class="math">L(x,y) <span class="op">=</span> ½(x<sup>2</sup>/κ <span class="op">+</span> y<sup>2</sup>)</span> 입니다. κ가 커질수록 등고선이 옆으로 길게 늘어나 좁고 깊은 협곡이 됩니다.</p>
+
+<!-- ── 2D DEMO ── -->
+<div class="demo">
+  <h4>데모 2 — 골짜기 탐험기 <span style="font-weight:400;color:var(--muted);font-size:13px">(캔버스를 눌러 시작점 이동)</span></h4>
+  <p class="cap">κ를 키우면 골짜기가 좁아지고, η를 올리면 세로 방향으로 튕기기 시작합니다. β(모멘텀)를 올려 지그재그가 어떻게 눌리는지 확인하세요.</p>
+  <canvas id="c2" height="330"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>경로</span>
+    <span><i style="background:var(--muted);height:1px"></i>등고선</span>
+    <span><i style="background:var(--s8)"></i>발산 구간</span>
+  </div>
+  <div class="ctrls">
+    <div class="ctrl">
+      <label for="s2k">조건수 κ (골짜기 가늘기) <b id="v2k">20</b></label>
+      <input type="range" id="s2k" min="1" max="80" step="1" value="20">
+    </div>
+    <div class="ctrl">
+      <label for="s2lr">학습률 η <b id="v2lr">1.50</b></label>
+      <input type="range" id="s2lr" min="0.02" max="2.2" step="0.01" value="1.5">
+    </div>
+    <div class="ctrl">
+      <label for="s2b">모멘텀 β <b id="v2b">0.00</b></label>
+      <input type="range" id="s2b" min="0" max="0.95" step="0.01" value="0">
+    </div>
+  </div>
+  <div class="btns">
+    <button type="button" id="b2opt">최적 η 자동설정</button>
+    <button type="button" id="b2zig">지그재그 만들기</button>
+    <button type="button" id="b2norm">κ=1 (정규화 효과)</button>
+    <button type="button" id="b2play" class="primary">▶ 애니메이션</button>
+  </div>
+  <div id="st2" class="status"></div>
+  <div class="readout">
+    <div>수렴 한계 2/λ<sub>max</sub><b>2.00</b></div>
+    <div>세로축 배율 1−η<b id="r2ry">−0.50</b></div>
+    <div>가로축 배율 1−η/κ<b id="r2rx">0.925</b></div>
+    <div>손실이 1/1000 되는 데<b id="r2k">—</b></div>
+  </div>
+</div>
+
+<h3 id="why">지그재그는 왜 생기는가 — 축별 분해</h3>
+
+<p>이 지형에서는 두 축이 서로 간섭하지 않으므로, 벡터 갱신식을 <strong>두 개의 독립적인 1차원 문제</strong>로 쪼갤 수 있습니다. 이것이 지그재그를 이해하는 가장 명확한 방법입니다.</p>
+
+<div class="eq">
+<span class="math">x<sub>k+1</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> ηλ<sub>x</sub>) x<sub>k</sub></span> &nbsp;&nbsp;·&nbsp;&nbsp;
+<span class="math">y<sub>k+1</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> ηλ<sub>y</sub>) y<sub>k</sub></span>
+<span class="note">λ는 각 축의 곡률(헤세 행렬의 고윳값). 여기서 λ<sub>x</sub> = 1/κ (완만), λ<sub>y</sub> = 1 (가파름)</span>
+</div>
+
+<p>같은 η를 쓰지만 <strong>각 축이 느끼는 배율은 서로 다릅니다.</strong> 곡률이 큰 축은 <span class="math">ηλ</span>가 커서 배율이 음수가 되기 쉽고(→ 부호가 매번 뒤집힘 = 진동), 곡률이 작은 축은 배율이 1에 가까워 거의 움직이지 않습니다(→ 답답한 전진).</p>
+
+<div class="demo">
+  <h4>데모 3 — 두 축의 좌표 수열</h4>
+  <p class="cap">위: 완만한 축(<span style="color:var(--s3);font-weight:650">x</span>) · 아래: 가파른 축(<span style="color:var(--s2);font-weight:650">y</span>). 막대가 기준선 <strong>위아래로 번갈아 서면</strong> 그것이 지그재그의 정체입니다. 데모 2의 슬라이더와 실시간으로 연동됩니다. <em>막대 높이는 압축(0.35승) 스케일 — 급감하는 진폭에서도 부호 교대가 보이도록 한 것입니다.</em></p>
+  <canvas id="c3" height="230"></canvas>
+  <div class="readout">
+    <div>세로축 부호 교대<b id="r3sw">—</b></div>
+    <div>가로축 진행률<b id="r3px">—</b></div>
+  </div>
+</div>
+
+<div class="key"><span class="lbl">지그재그의 정체</span><p>지그재그는 알고리즘의 버그가 아니라 <strong>“가파른 축은 이미 과도하게, 완만한 축은 여전히 부족하게” 움직이는 상태</strong>입니다. 하나의 η로 서로 다른 곡률의 축들을 동시에 만족시킬 수 없기 때문에 생기는 구조적 갈등입니다. 진행은 완만한 축이 결정하고, 안정성은 가파른 축이 결정합니다.</p></div>
+
+<h3 id="kappa">조건수 κ와 학습률의 딜레마</h3>
+
+<p>두 축의 곡률 비율을 <strong>조건수(condition number)</strong>라 부릅니다.</p>
+
+<div class="eq">
+<span class="math">κ <span class="op">=</span> <span class="frac"><span class="n">λ<sub>max</sub></span><span class="d">λ<sub>min</sub></span></span></span>
+<span class="note">κ = 1이면 완벽한 원형 그릇, κ가 클수록 좁고 긴 협곡 (ill-conditioned)</span>
+</div>
+
+<p>이제 딜레마가 선명해집니다.</p>
+
+<ul>
+  <li><strong>안정성 제약:</strong> 발산하지 않으려면 <span class="math">η &lt; <span class="num">2</span>/λ<sub>max</sub></span> — <em>가장 가파른</em> 축이 상한을 정합니다.</li>
+  <li><strong>속도 제약:</strong> 실제 수렴 속도는 <span class="math">|<span class="num">1</span> <span class="op">−</span> ηλ<sub>min</sub>|</span> — <em>가장 완만한</em> 축이 발목을 잡습니다.</li>
+</ul>
+
+<p>η를 λ<sub>max</sub>에 맞추면 λ<sub>min</sub> 방향은 <span class="math">ηλ<sub>min</sub> ≈ <span class="num">2</span>/κ</span>만큼만 줄어들어 κ가 클수록 기어갑니다. 반대로 λ<sub>min</sub>에 맞춰 η를 키우면 λ<sub>max</sub> 방향이 폭발합니다. <strong>κ가 곧 문제의 난이도</strong>인 셈입니다.</p>
+
+<div class="note">실제 신경망에서 κ는 흔히 10³~10⁶에 이릅니다. 입력 특징의 스케일이 제각각이거나(예: 나이 0–100 vs 소득 0–10⁸), 층이 깊어 그래디언트 크기가 층마다 크게 다를 때 κ가 급격히 커집니다.</div>
+
+<!-- ═══════════════════════ LEVEL 3 ═══════════════════════ -->
+<h2 id="l3"><span class="lv lv3"><span class="dot"></span>LEVEL 3 · 심화</span><br>최적 학습률과 수렴 속도의 한계</h2>
+
+<p>이차 함수라면 최적의 η를 <em>정확히</em> 계산할 수 있습니다. 모든 축의 배율 중 최댓값 <span class="math">max<sub>i</sub> |<span class="num">1</span> <span class="op">−</span> ηλ<sub>i</sub>|</span>를 최소화하면 되는데, 이는 양 끝 두 개, 즉 <span class="math">|<span class="num">1</span><span class="op">−</span>ηλ<sub>min</sub>|</span>과 <span class="math">|<span class="num">1</span><span class="op">−</span>ηλ<sub>max</sub>|</span>가 같아지는 지점입니다.</p>
+
+<div class="eq">
+<span class="math">η<sup>★</sup> <span class="op">=</span> <span class="frac"><span class="n"><span class="num">2</span></span><span class="d">λ<sub>min</sub> <span class="op">+</span> λ<sub>max</sub></span></span></span>
+&nbsp;&nbsp;⟹&nbsp;&nbsp;
+<span class="math">ρ <span class="op">=</span> <span class="frac"><span class="n">κ <span class="op">−</span> <span class="num">1</span></span><span class="d">κ <span class="op">+</span> <span class="num">1</span></span></span></span>,&nbsp;
+<span class="math">‖<b>w</b><sub>k</sub> <span class="op">−</span> <b>w</b><sup>★</sup>‖ ≤ ρ<sup>k</sup>‖<b>w</b><sub>0</sub> <span class="op">−</span> <b>w</b><sup>★</sup>‖</span>
+<span class="note">ρ = 반복당 오차 감소 비율. 최적으로 튜닝해도 완만한 축은 여전히 진동하며 수렴한다.</span>
+</div>
+
+<p>주목할 점: <strong>최적 학습률에서도 지그재그는 사라지지 않습니다.</strong> 정의상 <span class="math">η<sup>★</sup>λ<sub>max</sub> <span class="op">=</span> <span class="num">2</span>κ/(κ<span class="op">+</span><span class="num">1</span>) &gt; <span class="num">1</span></span>이므로 가파른 축의 배율은 항상 음수입니다. 최적점은 “진동 없음”이 아니라 <strong>“진동의 감쇠 속도와 전진 속도가 정확히 균형을 이루는 점”</strong>입니다.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>조건수 κ</th><th class="num">최적 ρ = (κ−1)/(κ+1)</th><th class="num">오차 1/1000 반복 수</th><th class="num">모멘텀 사용 시</th><th class="num">절감</th></tr></thead>
+<tbody>
+<tr><td>10</td><td class="num">0.818</td><td class="num">35</td><td class="num">11</td><td class="num">3.2×</td></tr>
+<tr><td>50</td><td class="num">0.961</td><td class="num">173</td><td class="num">25</td><td class="num">6.9×</td></tr>
+<tr><td>100</td><td class="num">0.980</td><td class="num">346</td><td class="num">35</td><td class="num">9.9×</td></tr>
+<tr><td>1,000</td><td class="num">0.998</td><td class="num">3,454</td><td class="num">110</td><td class="num">31×</td></tr>
+<tr><td>10,000</td><td class="num">0.9998</td><td class="num">34,539</td><td class="num">346</td><td class="num">100×</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>반복 수가 <span class="math">κ</span>에 <strong>선형</strong>으로 늘어납니다. κ가 10배가 되면 학습 시간도 10배입니다. 그런데 마지막 열이 말하듯, 모멘텀을 쓰면 이 의존성이 <span class="math"><span class="rt"><span>κ</span></span></span>로 떨어집니다 — 이것이 다음 절의 핵심입니다.</p>
+
+<h3 id="fix">처방 다섯 가지</h3>
+
+<h4>① 문제 자체를 동그랗게 — 정규화</h4>
+<p>가장 근본적인 해법은 알고리즘이 아니라 <strong>지형을 바꾸는 것</strong>입니다. 입력 특징을 표준화(평균 0, 분산 1)하거나 배치 정규화·층 정규화를 넣으면 헤세 행렬의 고윳값 분포가 좁아져 κ 자체가 줄어듭니다. 데모 2에서 <em>κ=1</em> 버튼을 누르면 경로가 <strong>단 한 걸음의 직선</strong>이 되는 것을 볼 수 있습니다. 지그재그 대응책 중 비용 대비 효과가 가장 큽니다.</p>
+
+<h4>② 진동을 상쇄시키기 — 모멘텀 (Heavy Ball)</h4>
+<p>이전 이동 방향을 관성으로 누적합니다. 공이 골짜기를 구르듯 움직인다는 비유에서 이름이 왔습니다.</p>
+
+<div class="eq">
+<span class="math">v<sub>k+1</sub> <span class="op">=</span> β v<sub>k</sub> <span class="op">+</span> ∇L(<b>w</b><sub>k</sub>)</span>,&nbsp;&nbsp;
+<span class="math"><b>w</b><sub>k+1</sub> <span class="op">=</span> <b>w</b><sub>k</sub> <span class="op">−</span> η v<sub>k+1</sub></span>
+<span class="note">β는 보통 0.9. β=0이면 순수 경사 하강법과 같다.</span>
+</div>
+
+<p>왜 지그재그가 줄어들까요? <strong>부호 때문입니다.</strong> 진동하는 축의 그래디언트는 <span class="math">+, −, +, −</span>로 번갈아 나타나므로 누적하면 서로 <strong>상쇄</strong>됩니다. 반면 골짜기를 따라가는 축의 그래디언트는 계속 같은 부호라 <strong>누적</strong>되어 실효 보폭이 최대 <span class="math"><span class="num">1</span>/(<span class="num">1</span><span class="op">−</span>β)</span>배(β=0.9면 10배)까지 커집니다. 억눌러야 할 방향은 억누르고, 밀어야 할 방향은 미는 셈입니다.</p>
+
+<div class="eq">
+<span class="math">β<sup>★</sup> <span class="op">=</span> <span class="frac"><span class="n">(<span class="rt"><span>κ</span></span> <span class="op">−</span> <span class="num">1</span>)<sup>2</sup></span><span class="d">(<span class="rt"><span>κ</span></span> <span class="op">+</span> <span class="num">1</span>)<sup>2</sup></span></span></span>,&nbsp;&nbsp;
+<span class="math">η<sup>★</sup> <span class="op">=</span> <span class="frac"><span class="n"><span class="num">4</span></span><span class="d">(<span class="rt"><span>λ<sub>min</sub></span></span> <span class="op">+</span> <span class="rt"><span>λ<sub>max</sub></span></span>)<sup>2</sup></span></span></span>
+&nbsp;⟹&nbsp;
+<span class="math">ρ <span class="op">=</span> <span class="frac"><span class="n"><span class="rt"><span>κ</span></span> <span class="op">−</span> <span class="num">1</span></span><span class="d"><span class="rt"><span>κ</span></span> <span class="op">+</span> <span class="num">1</span></span></span></span>
+<span class="note">κ → √κ. 조건수 10,000인 문제에서 필요한 반복이 34,539 → 346으로 줄어든다.</span>
+</div>
+
+<div class="note"><strong>주의 — β는 클수록 좋은 값이 아닙니다.</strong> 감쇠가 걸린(underdamped) 영역에서는 <em>모든</em> 축이 똑같이 √β 비율로 수렴합니다. 이것이 κ 의존성을 없애 주는 원리이지만, 동시에 β가 문제의 κ에 비해 과하면 원래 빨랐던 축까지 √β로 <strong>느려집니다</strong>. 관행적인 β=0.9는 <strong>κ ≳ 38</strong>부터 최적 튜닝된 경사 하강법을 앞지르고, β=0.9가 <em>정확히</em> 최적이 되는 지점은 κ ≈ 1,442입니다. 반대로 κ가 그보다 작은 문제에서는 β=0.9가 오히려 손해입니다. η와 β는 항상 함께 튜닝하세요.</div>
+
+<p><strong>Nesterov 가속 경사법(NAG)</strong>은 “먼저 관성만큼 미리 가본 뒤 그 지점의 기울기를 재는” 변형으로, 과도한 오버슈트를 한 박자 먼저 교정합니다. 일반 볼록 함수에서 <span class="math">O(<span class="num">1</span>/k<sup>2</sup>)</span> 수렴률을 보장하며, 이는 1차 방법이 도달 가능한 이론적 최적입니다.</p>
+
+<h4>③ 축마다 다른 보폭 — 적응적 방법 (RMSProp · Adam)</h4>
+<p>“하나의 η로 모든 축을 감당할 수 없다”는 것이 문제였으니, <strong>축마다 η를 다르게 주자</strong>는 접근입니다. 최근 그래디언트 제곱의 이동 평균으로 각 축을 나눠 줍니다.</p>
+
+<div class="eq">
+<span class="math">m<sub>k</sub> <span class="op">=</span> β<sub>1</sub>m<sub>k−1</sub> <span class="op">+</span> (<span class="num">1</span><span class="op">−</span>β<sub>1</sub>)g<sub>k</sub></span>,&nbsp;
+<span class="math">v<sub>k</sub> <span class="op">=</span> β<sub>2</sub>v<sub>k−1</sub> <span class="op">+</span> (<span class="num">1</span><span class="op">−</span>β<sub>2</sub>)g<sub>k</sub><sup>2</sup></span>,&nbsp;
+<span class="math"><b>w</b><sub>k+1</sub> <span class="op">=</span> <b>w</b><sub>k</sub> <span class="op">−</span> η <span class="frac"><span class="n">m̂<sub>k</sub></span><span class="d"><span class="rt"><span>v̂<sub>k</sub></span></span> <span class="op">+</span> ε</span></span></span>
+<span class="note">Adam = 모멘텀(m) + 축별 스케일링(v) + 초기 편향 보정(m̂, v̂)</span>
+</div>
+
+<p>그래디언트가 큰(가파른) 축은 <span class="math"><span class="rt"><span>v</span></span></span>가 커서 자동으로 보폭이 줄고, 작은 축은 늘어납니다. <strong>대각 근사 전처리(diagonal preconditioning)</strong>로 κ를 실질적으로 낮추는 것과 같습니다. 다만 축이 회전된 골짜기(변수 간 상관이 큰 경우)에는 대각 성분만으로 부족해 효과가 제한됩니다.</p>
+
+<h4>④ 곡률을 직접 쓰기 — 2차 방법</h4>
+<p>뉴턴법 <span class="math"><b>w</b><sub>k+1</sub> <span class="op">=</span> <b>w</b><sub>k</sub> <span class="op">−</span> H<sup>−1</sup>∇L</span>은 헤세 행렬의 역행렬을 곱해 <strong>지형을 완벽한 원으로 되돌립니다</strong>(실질 κ = 1). 이차 함수라면 단 한 걸음에 끝납니다. 문제는 파라미터 n개일 때 H가 n×n이라 딥러닝(n ≈ 10⁹)에서는 계산이 불가능하다는 점. 그래서 L-BFGS(저계수 근사), K-FAC(크로네커 인수분해), Shampoo 같은 근사 2차 방법이 쓰입니다.</p>
+
+<h4>⑤ 걸음 폭을 시간에 따라 줄이기 — 스케줄과 클리핑</h4>
+<p>초반에는 큰 η로 빠르게 내려오고 후반에는 줄여 진동을 잠재우는 <strong>학습률 스케줄</strong>(step decay, cosine annealing)이 표준입니다. 초반 발산을 막는 <strong>워밍업</strong>, 그래디언트 폭발을 잘라내는 <strong>클리핑</strong>도 함께 쓰입니다. 다만 이들은 증상 완화이지 κ를 줄이지는 않습니다.</p>
+
+<div class="note"><strong>구분해야 할 두 종류의 흔들림.</strong> 여기서 다룬 지그재그는 <em>결정론적</em> 진동으로, 학습률이 곡률에 비해 클 때 생깁니다. 반면 SGD의 손실 곡선이 떠는 것은 미니배치마다 그래디언트 추정이 달라서 생기는 <em>확률적</em> 노이즈입니다. 전자는 η를 낮추거나 지형을 고쳐야 하고, 후자는 배치 크기를 키우거나 평균을 내야 합니다. 처방이 다르므로 진단을 먼저 하세요.</div>
+
+<!-- ═══════════════════════ COMPARE ═══════════════════════ -->
+<h2 id="cmp">비교 실험실</h2>
+
+<p>같은 골짜기, 같은 시작점, 같은 반복 횟수에서 세 방법의 경로를 겹쳐 봅니다.</p>
+
+<div class="demo">
+  <h4>데모 4 — GD vs 모멘텀 vs Adam</h4>
+  <p class="cap">경사 하강법과 모멘텀 모두 <strong>이론적 최적 파라미터</strong>(η<sup>★</sup>, β<sup>★</sup>)를 씁니다. 그런데도 파란 경로는 끝까지 벽을 튕기며 기어가고, 주황 경로는 초반에 관성으로 크게 한 번 휘돈 뒤 <strong>진동이 스스로 상쇄되며</strong> 정확히 안착합니다. κ를 키울수록 아래 손실 곡선의 격차가 벌어집니다.</p>
+  <canvas id="c4" height="330"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>경사 하강법</span>
+    <span><i style="background:var(--s2)"></i>모멘텀 (최적 β<sup>★</sup>)</span>
+    <span><i style="background:var(--s3)"></i>Adam</span>
+  </div>
+  <div class="ctrls">
+    <div class="ctrl">
+      <label for="s4k">조건수 κ <b id="v4k">30</b></label>
+      <input type="range" id="s4k" min="2" max="80" step="1" value="30">
+    </div>
+    <div class="ctrl">
+      <label for="s4n">반복 수 <b id="v4n">40</b></label>
+      <input type="range" id="s4n" min="5" max="120" step="1" value="40">
+    </div>
+  </div>
+  <h4 style="margin:20px 0 6px">손실 곡선 (로그 스케일)</h4>
+  <canvas id="c5" height="180"></canvas>
+  <div class="readout">
+    <div>GD 최종 손실<b id="r4a">—</b></div>
+    <div>모멘텀 최종 손실<b id="r4b">—</b></div>
+    <div>Adam 최종 손실<b id="r4c">—</b></div>
+    <div>사용된 β<sup>★</sup><b id="r4beta">—</b></div>
+    <div>수렴률 κ vs √κ<b id="r4rate">—</b></div>
+  </div>
+</div>
+
+<h3>진단 가이드 — 증상에서 처방까지</h3>
+
+<div class="tw">
+<table>
+<thead><tr><th>증상</th><th>가장 흔한 원인</th><th>먼저 해볼 것</th></tr></thead>
+<tbody>
+<tr><td>손실이 <strong>NaN/Inf</strong>가 됨</td><td>η &gt; 2/λ<sub>max</sub> (발산)</td><td>η를 1/3~1/10로, 워밍업, 그래디언트 클리핑</td></tr>
+<tr><td>손실이 <strong>톱니처럼</strong> 크게 진동하며 잘 안 줄어듦</td><td>η가 임계값 근처 (지그재그)</td><td>η 절반으로 ↓, 모멘텀 β=0.9, 입력 정규화</td></tr>
+<tr><td>손실이 <strong>거의 평평</strong>하게 아주 천천히 감소</td><td>η 과소 또는 κ 과대</td><td>η ↑, 정규화, Adam, 학습률 탐색(LR range test)</td></tr>
+<tr><td>초반엔 빠르다가 <strong>중반에 정체</strong></td><td>좁은 골짜기 진입, κ 유효값 상승</td><td>모멘텀/Nesterov, cosine 스케줄</td></tr>
+<tr><td>학습 손실만 흔들리고 <strong>추세는 하락</strong></td><td>미니배치 노이즈 (지그재그 아님)</td><td>배치 크기 ↑, EMA 평활화 후 재판단</td></tr>
+<tr><td>일부 층만 학습되고 나머지는 정체</td><td>층간 그래디언트 스케일 불균형</td><td>층별 학습률, 정규화 층 추가, 가중치 초기화 점검</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>핵심 정리 카드</h3>
+<div class="card">
+<ol>
+<li><strong>갱신식</strong> <span class="math">w ← w − η∇L</span>. 마이너스가 “내려간다”를 만든다.</li>
+<li><strong>수렴 조건</strong> <span class="math">η &lt; <span class="num">2</span>/λ<sub>max</sub></span>. 가장 가파른 축이 상한을 정한다.</li>
+<li><strong>지그재그 조건</strong> <span class="math"><span class="num">1</span>/λ<sub>max</sub> &lt; η &lt; <span class="num">2</span>/λ<sub>max</sub></span>. 배율이 음수가 되어 부호가 매 반복 뒤집힌다.</li>
+<li><strong>원인</strong>은 큰 조건수 <span class="math">κ = λ<sub>max</sub>/λ<sub>min</sub></span>. 하나의 η로 여러 곡률을 만족시킬 수 없다.</li>
+<li><strong>최적 η는</strong> <span class="math"><span class="num">2</span>/(λ<sub>min</sub>+λ<sub>max</sub>)</span>, 수렴률 <span class="math">(κ−1)/(κ+1)</span> — 반복 수가 κ에 비례.</li>
+<li><strong>모멘텀</strong>은 이를 <span class="math"><span class="rt"><span>κ</span></span></span>로 낮춘다. 진동 성분은 상쇄, 일관된 성분은 누적되기 때문.</li>
+<li><strong>가장 먼저 할 일</strong>은 옵티마이저 교체가 아니라 <strong>입력·활성값 정규화</strong>로 κ 자체를 줄이는 것.</li>
+</ol>
+</div>
+
+<footer>
+경사 하강법 학습자료 · 입문 → 학부 → 심화 3단계 · 인터랙티브 캔버스 4종<br>
+모든 수치(최적 학습률, 수렴률, 모멘텀 최적 파라미터)는 수치 시뮬레이션으로 검증되었습니다.
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ────────── theme ────────── */
+var btn = document.getElementById('themeBtn');
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){
+  document.documentElement.setAttribute('data-theme','dark');
+}
+function syncBtn(){
+  var d = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.textContent = d ? '◑ 라이트' : '◐ 다크';
+}
+btn.addEventListener('click', function(){
+  var d = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', d ? 'light' : 'dark');
+  syncBtn(); drawAll();
+});
+syncBtn();
+
+/* ────────── helpers ────────── */
+function C(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function fit(cv){
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // canvas.height 대입은 height 속성도 바꾸므로, 최초 CSS 높이를 한 번만 캐시한다
+  if(!cv.dataset.baseH) cv.dataset.baseH = cv.getAttribute('height');
+  var w = cv.clientWidth, h = parseInt(cv.dataset.baseH, 10);
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  cv.style.height = h + 'px';
+  var g = cv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  return {g:g, w:w, h:h};
+}
+function dot(g,x,y,r,fill,ring){
+  g.beginPath(); g.arc(x,y,r,0,6.2832);
+  g.fillStyle = fill; g.fill();
+  if(ring){ g.lineWidth = 2; g.strokeStyle = ring; g.stroke(); }
+}
+function label(g,t,x,y,col,size,align){
+  g.fillStyle = col; g.font = (size||11)+'px system-ui,-apple-system,sans-serif';
+  g.textAlign = align||'left'; g.textBaseline='alphabetic'; g.fillText(t,x,y);
+}
+function setStatus(el, kind, text){
+  var map = {ok:['var(--good)','✓'], warn:['var(--warn)','◈'], bad:['var(--s8)','✕'], info:['var(--s1)','●']};
+  var m = map[kind];
+  el.style.color = m[0]; el.style.borderColor = m[0];
+  el.innerHTML = '<span class="ico">'+m[1]+'</span>'+text;
+}
+
+/* ══════════════ DEMO 1 : 1-D ══════════════ */
+var c1=document.getElementById('c1'), s1lr=document.getElementById('s1lr'), s1n=document.getElementById('s1n');
+function draw1(){
+  var lr = +s1lr.value, N = +s1n.value;
+  document.getElementById('v1lr').textContent = lr.toFixed(3);
+  document.getElementById('v1n').textContent = N;
+  var f = 1 - 2*lr;
+  document.getElementById('r1f').textContent = f.toFixed(3);
+
+  var e = fit(c1), g=e.g, w=e.w, h=e.h;
+  var padL=14, padR=14, padT=16, padB=26;
+  var XR = 1.35;                          // x domain ±XR
+  var sx = function(x){ return padL + (x+XR)/(2*XR)*(w-padL-padR); };
+  var YMAX = XR*XR;
+  var sy = function(v){ return h-padB - (v/YMAX)*(h-padT-padB); };
+
+  // grid + axis
+  g.strokeStyle=C('--grid'); g.lineWidth=1;
+  for(var i=-1;i<=1;i+=0.5){ g.beginPath(); g.moveTo(sx(i),padT); g.lineTo(sx(i),h-padB); g.stroke(); }
+  g.strokeStyle=C('--axis'); g.beginPath(); g.moveTo(padL,h-padB); g.lineTo(w-padR,h-padB); g.stroke();
+  label(g,'w',w-padR,h-padB+17,C('--muted'),11,'end');
+  label(g,'0',sx(0)+4,h-padB+17,C('--muted'),11,'left');
+
+  // parabola
+  g.beginPath(); g.lineWidth=2; g.strokeStyle=C('--axis');
+  for(var p=0;p<=200;p++){ var x=-XR+2*XR*p/200; var Y=sy(x*x); if(p===0)g.moveTo(sx(x),Y); else g.lineTo(sx(x),Y); }
+  g.stroke();
+  label(g,'L(w) = w²', padL+4, padT+12, C('--muted'), 12);
+
+  // iterate
+  var xs=[1.0], cur=1.0, diverged=false, hitK=-1;
+  for(var k=0;k<N;k++){
+    cur = f*cur; xs.push(cur);
+    if(Math.abs(cur)>1e3){ diverged=true; break; }
+    if(hitK<0 && Math.abs(cur)<1e-3) hitK=k+1;
+  }
+  var col = Math.abs(f)>1 ? C('--s8') : C('--s1');
+
+  // connecting steps
+  g.lineWidth=2; g.strokeStyle=col; g.globalAlpha=0.5;
+  g.beginPath();
+  for(var j=0;j<xs.length;j++){
+    var xv=Math.max(-XR,Math.min(XR,xs[j]));
+    var X=sx(xv), Y=sy(Math.min(YMAX,xs[j]*xs[j]));
+    if(j===0) g.moveTo(X,Y); else g.lineTo(X,Y);
+  }
+  g.stroke(); g.globalAlpha=1;
+
+  // points
+  for(var j2=0;j2<xs.length;j2++){
+    var xv2=xs[j2];
+    if(Math.abs(xv2)>XR) continue;
+    var X2=sx(xv2), Y2=sy(xv2*xv2);
+    var r = j2===0?6.5:4.5;
+    dot(g,X2,Y2,r, j2===0?C('--text-primary'):col, C('--surface-1'));
+    // drop line to axis
+    g.strokeStyle=col; g.globalAlpha=0.22; g.lineWidth=1;
+    g.beginPath(); g.moveTo(X2,Y2); g.lineTo(X2,h-padB); g.stroke(); g.globalAlpha=1;
+  }
+  label(g,'w₀', sx(1.0), sy(1.0)-12, C('--text-secondary'), 11.5, 'center');
+
+  // status
+  var st=document.getElementById('st1');
+  if(Math.abs(f)>1) setStatus(st,'bad','발산 — η > 1, 배율 |1−2η| > 1');
+  else if(Math.abs(f)===1) setStatus(st,'warn','영구 순환 — 두 점을 영원히 왕복');
+  else if(f<0) setStatus(st,'warn','진동하며 수렴 — 매 반복 부호가 뒤집힘 (지그재그)');
+  else setStatus(st,'ok','단조 수렴 — 부호를 유지하며 한쪽에서 접근');
+
+  var last = xs[xs.length-1];
+  document.getElementById('r1w').textContent = (Math.abs(last)>1e4)? '∞' : Math.abs(last).toExponential(1);
+  var need = (Math.abs(f)>=1)? '도달 못함' : Math.ceil(Math.log(1e-3)/Math.log(Math.abs(f)))+' 회';
+  document.getElementById('r1k').textContent = need;
+
+  // highlight regime row
+  var rows=document.querySelectorAll('#regime tbody tr');
+  for(var t=0;t<rows.length;t++){
+    var lo=+rows[t].dataset.lo, hi=+rows[t].dataset.hi;
+    rows[t].classList.toggle('hi', lr>=lo && lr<hi);
+  }
+}
+s1lr.addEventListener('input',draw1); s1n.addEventListener('input',draw1);
+var qb=document.querySelectorAll('button[data-lr]');
+for(var q=0;q<qb.length;q++){ (function(b){ b.addEventListener('click',function(){ s1lr.value=b.dataset.lr; draw1(); }); })(qb[q]); }
+
+/* ══════════════ DEMO 2+3 : 2-D valley ══════════════ */
+var c2=document.getElementById('c2'), c3=document.getElementById('c3');
+var s2k=document.getElementById('s2k'), s2lr=document.getElementById('s2lr'), s2b=document.getElementById('s2b');
+var start={x:-4.6,y:1.75}, anim={on:false,i:0,t:0};
+var XD=5.4, YD=2.4, NIT=60;
+
+function path2(){
+  var kap=+s2k.value, lr=+s2lr.value, be=+s2b.value;
+  var lx=1/kap, ly=1;
+  var x=start.x, y=start.y, vx=0, vy=0;
+  var P=[{x:x,y:y}];
+  for(var k=0;k<NIT;k++){
+    vx = be*vx + lx*x; vy = be*vy + ly*y;
+    x -= lr*vx; y -= lr*vy;
+    P.push({x:x,y:y});
+    if(!isFinite(x)||!isFinite(y)||Math.abs(x)>1e6||Math.abs(y)>1e6) break;
+  }
+  return P;
+}
+function draw2(){
+  var kap=+s2k.value, lr=+s2lr.value, be=+s2b.value;
+  document.getElementById('v2k').textContent=kap;
+  document.getElementById('v2lr').textContent=lr.toFixed(2);
+  document.getElementById('v2b').textContent=be.toFixed(2);
+
+  var e=fit(c2), g=e.g, w=e.w, h=e.h;
+  var sx=function(x){ return (x+XD)/(2*XD)*w; };
+  var sy=function(y){ return h - (y+YD)/(2*YD)*h; };
+
+  // contours (ellipses of L = c)
+  g.strokeStyle=C('--grid'); g.lineWidth=1;
+  for(var i=1;i<=9;i++){
+    var b=YD*i/9;                    // semi-axis in y
+    var c=b*b/2;                     // level
+    var a=Math.sqrt(2*c*kap);        // semi-axis in x
+    g.beginPath();
+    g.ellipse(sx(0),sy(0), (a/(2*XD))*w, (b/(2*YD))*h, 0,0,6.2832);
+    g.stroke();
+  }
+  // axes
+  g.strokeStyle=C('--axis'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,sy(0)); g.lineTo(w,sy(0)); g.stroke();
+  g.beginPath(); g.moveTo(sx(0),0); g.lineTo(sx(0),h); g.stroke();
+  label(g,'완만한 축  x  (λ = 1/κ)', 10, h-10, C('--muted'), 11.5);
+  label(g,'가파른 축 y (λ = 1)', sx(0)+8, 16, C('--muted'), 11.5);
+
+  var P=path2();
+  var shown = anim.on ? Math.min(anim.i, P.length-1) : P.length-1;
+  var diverge = !isFinite(P[P.length-1].x) || Math.abs(P[P.length-1].y)>YD*3;
+
+  // path
+  g.lineWidth=2; g.lineJoin='round';
+  g.strokeStyle = diverge ? C('--s8') : C('--s1');
+  g.beginPath();
+  for(var j=0;j<=shown;j++){
+    var X=sx(P[j].x), Y=sy(P[j].y);
+    if(!isFinite(X)||!isFinite(Y)) break;
+    X=Math.max(-2e3,Math.min(2e3,X)); Y=Math.max(-2e3,Math.min(2e3,Y));
+    if(j===0) g.moveTo(X,Y); else g.lineTo(X,Y);
+  }
+  g.stroke();
+  // markers
+  for(var m=0;m<=shown;m++){
+    var Xm=sx(P[m].x), Ym=sy(P[m].y);
+    if(!isFinite(Xm)||!isFinite(Ym)||Xm<-40||Xm>w+40||Ym<-40||Ym>h+40) continue;
+    dot(g,Xm,Ym, m===0?6.5:3.6, m===0?C('--text-primary'):(diverge?C('--s8'):C('--s1')), C('--surface-1'));
+  }
+  dot(g,sx(0),sy(0),5.5,C('--surface-1'),C('--text-primary'));
+  label(g,'최솟값', sx(0)+12, sy(0)+20, C('--text-secondary'), 11.5);
+
+  // readouts
+  var ry=1-lr, rx=1-lr/kap;
+  document.getElementById('r2ry').textContent=ry.toFixed(2);
+  document.getElementById('r2rx').textContent=rx.toFixed(3);
+  var slow=Math.max(Math.abs(ry),Math.abs(rx));
+  document.getElementById('r2k').textContent = slow>=1 ? '수렴 안 함' : Math.ceil(Math.log(1e-3)/Math.log(slow))+' 회';
+
+  var st=document.getElementById('st2');
+  if(be>0){
+    if(diverge) setStatus(st,'bad','발산 — η와 β 조합이 안정 범위를 벗어남');
+    else setStatus(st,'ok','모멘텀 작동 중 — 진동 성분이 상쇄되고 골짜기 방향은 가속됨');
+  }
+  else if(Math.abs(ry)>1) setStatus(st,'bad','발산 — η > 2/λmax = 2');
+  else if(ry<0) setStatus(st,'warn','지그재그 — 세로축 배율이 음수(1−η < 0)라 매 반복 부호가 뒤집힘');
+  else if(lr<0.15) setStatus(st,'warn','너무 느림 — 진동은 없지만 가로축이 거의 움직이지 않음');
+  else setStatus(st,'ok','단조 수렴 — 다만 가로축 진행은 여전히 κ에 비례해 느림');
+
+  draw3(P);
+}
+function draw3(P){
+  var e=fit(c3), g=e.g, w=e.w, h=e.h;
+  var halves=[{key:'x',y0:6,col:C('--s3'),name:'완만한 축 x — 천천히 한 방향으로'},
+              {key:'y',y0:h/2+6,col:C('--s2'),name:'가파른 축 y — 부호가 번갈아 뒤집힘'}];
+  var n=Math.min(P.length,34);
+  var bw=(w-70)/n;
+  for(var s=0;s<2;s++){
+    var H=halves[s], base=H.y0+(h/2-12)/2, amp=(h/2-40)/2;
+    var mx=0.0001;
+    for(var i=0;i<n;i++) mx=Math.max(mx,Math.abs(P[i][H.key]));
+    g.strokeStyle=C('--axis'); g.lineWidth=1;
+    g.beginPath(); g.moveTo(56,base); g.lineTo(w-8,base); g.stroke();
+    label(g,H.name, 56, H.y0+11, C('--muted'), 11.5);
+    for(var b=0;b<n;b++){
+      var v=P[b][H.key]; if(!isFinite(v)) continue;
+      // 압축(0.35승) 스케일 — 급격히 줄어드는 진폭에서도 부호 교대가 보이도록
+      var hh=Math.max(1.2, Math.min(amp, Math.pow(Math.abs(v)/mx, 0.35)*amp));
+      var X=56+b*bw;
+      g.fillStyle=H.col; g.globalAlpha=v<0?0.55:1;
+      var top = v>=0 ? base-hh : base;
+      g.beginPath();
+      if(g.roundRect) g.roundRect(X+0.8, top, Math.max(1.6,bw-2.2), hh, 2);
+      else g.rect(X+0.8, top, Math.max(1.6,bw-2.2), hh);
+      g.fill(); g.globalAlpha=1;
+    }
+    label(g,'k →', w-8, base+amp+12, C('--muted'),10.5,'end');
+  }
+  // stats
+  var sw=0, n2=Math.min(P.length,25);
+  for(var t=1;t<n2;t++){ if(P[t].y*P[t-1].y<0) sw++; }
+  document.getElementById('r3sw').textContent = sw + ' / ' + (n2-1) + ' 회';
+  var px = (Math.abs(P[0].x)>0) ? (1-Math.abs(P[Math.min(P.length-1,24)].x)/Math.abs(P[0].x)) : 0;
+  document.getElementById('r3px').textContent = isFinite(px)? Math.max(0,Math.round(px*100))+' %' : '—';
+}
+[s2k,s2lr,s2b].forEach(function(el){ el.addEventListener('input',function(){ anim.on=false; draw2(); }); });
+document.getElementById('b2opt').addEventListener('click',function(){
+  var kap=+s2k.value; s2lr.value=(2/(1/kap+1)).toFixed(2); s2b.value=0; anim.on=false; draw2();
+});
+document.getElementById('b2zig').addEventListener('click',function(){
+  s2k.value=30; s2lr.value=1.75; s2b.value=0; anim.on=false; draw2();
+});
+document.getElementById('b2norm').addEventListener('click',function(){
+  s2k.value=1; s2lr.value=1.0; s2b.value=0; anim.on=false; draw2();
+});
+document.getElementById('b2play').addEventListener('click',function(){
+  anim.on=true; anim.i=0; anim.t=performance.now(); requestAnimationFrame(step);
+});
+function step(now){
+  if(!anim.on) return;
+  if(now-anim.t>70){ anim.i++; anim.t=now; }
+  draw2();
+  if(anim.i>=NIT){ anim.on=false; draw2(); return; }
+  requestAnimationFrame(step);
+}
+function pick(ev){
+  var r=c2.getBoundingClientRect();
+  var px=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width;
+  var py=((ev.touches?ev.touches[0].clientY:ev.clientY)-r.top)/r.height;
+  start.x=(px*2-1)*XD; start.y=(1-py*2)*YD;
+  anim.on=false; draw2();
+}
+c2.addEventListener('pointerdown',function(ev){ ev.preventDefault(); pick(ev); });
+
+/* ══════════════ DEMO 4 : optimizer comparison ══════════════ */
+var c4=document.getElementById('c4'), c5=document.getElementById('c5');
+var s4k=document.getElementById('s4k'), s4n=document.getElementById('s4n');
+function runOpt(kind, kap, N){
+  var lx=1/kap, ly=1;
+  var lr = 2/(lx+ly);                                  // η★ = 2/(λmin+λmax)
+  var beta = Math.pow((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1), 2);   // β★
+  var lrm = 4/Math.pow(Math.sqrt(lx)+Math.sqrt(ly), 2);            // η★ (heavy ball)
+  var x=-4.6, y=1.2, vx=0, vy=0, mx=0,my=0, sx2=0,sy2=0;
+  var P=[{x:x,y:y}], L=[0.5*(lx*x*x+ly*y*y)];
+  var b1=0.9,b2=0.999,eps=1e-8, alr=0.2;
+  for(var k=1;k<=N;k++){
+    var gx=lx*x, gy=ly*y;
+    if(kind==='gd'){ x-=lr*gx; y-=lr*gy; }
+    else if(kind==='mom'){
+      vx=beta*vx+gx; vy=beta*vy+gy; x-=lrm*vx; y-=lrm*vy;
+    } else {
+      mx=b1*mx+(1-b1)*gx; my=b1*my+(1-b1)*gy;
+      sx2=b2*sx2+(1-b2)*gx*gx; sy2=b2*sy2+(1-b2)*gy*gy;
+      var mhx=mx/(1-Math.pow(b1,k)), mhy=my/(1-Math.pow(b1,k));
+      var shx=sx2/(1-Math.pow(b2,k)), shy=sy2/(1-Math.pow(b2,k));
+      x-=alr*mhx/(Math.sqrt(shx)+eps); y-=alr*mhy/(Math.sqrt(shy)+eps);
+    }
+    P.push({x:x,y:y}); L.push(0.5*(lx*x*x+ly*y*y));
+    if(!isFinite(x)||Math.abs(x)>1e8) break;
+  }
+  return {P:P,L:L};
+}
+function draw4(){
+  var kap=+s4k.value, N=+s4n.value;
+  document.getElementById('v4k').textContent=kap;
+  document.getElementById('v4n').textContent=N;
+  var runs=[{k:'gd',c:'--s1'},{k:'mom',c:'--s2'},{k:'adam',c:'--s3'}].map(function(o){
+    var r=runOpt(o.k,kap,N); r.col=C(o.c); return r;
+  });
+
+  var e=fit(c4), g=e.g, w=e.w, h=e.h;
+  var YD4=4.4;
+  var sx=function(x){ return (x+XD)/(2*XD)*w; };
+  var sy=function(y){ return h-(y+YD4)/(2*YD4)*h; };
+  g.strokeStyle=C('--grid'); g.lineWidth=1;
+  for(var i=1;i<=9;i++){
+    var b=YD4*i/9, c=b*b/2, a=Math.sqrt(2*c*kap);
+    g.beginPath(); g.ellipse(sx(0),sy(0),(a/(2*XD))*w,(b/(2*YD4))*h,0,0,6.2832); g.stroke();
+  }
+  g.strokeStyle=C('--axis');
+  g.beginPath(); g.moveTo(0,sy(0)); g.lineTo(w,sy(0)); g.stroke();
+
+  runs.forEach(function(r){
+    g.strokeStyle=r.col; g.lineWidth=2; g.lineJoin='round'; g.beginPath();
+    for(var j=0;j<r.P.length;j++){
+      var X=sx(r.P[j].x), Y=sy(r.P[j].y);
+      if(!isFinite(X)||!isFinite(Y)) break;
+      X=Math.max(-2e3,Math.min(2e3,X)); Y=Math.max(-2e3,Math.min(2e3,Y));
+      if(j===0) g.moveTo(X,Y); else g.lineTo(X,Y);
+    }
+    g.stroke();
+    for(var m=0;m<r.P.length;m+=1){
+      var Xm=sx(r.P[m].x), Ym=sy(r.P[m].y);
+      if(!isFinite(Xm)||Xm<0||Xm>w||Ym<0||Ym>h) continue;
+      dot(g,Xm,Ym,2.8,r.col,null);
+    }
+  });
+  dot(g,sx(-4.6),sy(1.2),6.5,C('--text-primary'),C('--surface-1'));
+  dot(g,sx(0),sy(0),5.5,C('--surface-1'),C('--text-primary'));
+  label(g,'시작', sx(-4.6)+10, sy(1.2)-9, C('--text-secondary'),11.5);
+  label(g,'최솟값', sx(0)+12, sy(0)+20, C('--text-secondary'),11.5);
+
+  // loss curves
+  var e2=fit(c5), g2=e2.g, W=e2.w, H=e2.h;
+  var pl=42, pb=22, pt=12, pr=8;
+  var hi=1e-300, mn=Infinity;
+  runs.forEach(function(r){ r.L.forEach(function(v){ if(isFinite(v)&&v>0){ hi=Math.max(hi,v); mn=Math.min(mn,v); } }); });
+  if(!isFinite(mn)||mn<=0) mn=hi*1e-9;
+  var lo=Math.max(mn*0.5, hi*1e-16);
+  var lgl=Math.log10(lo), lgh=Math.log10(hi);
+  var Y=function(v){ var t=(Math.log10(Math.max(v,lo))-lgl)/(lgh-lgl); return H-pb-t*(H-pb-pt); };
+  var X=function(k){ return pl + k/N*(W-pl-pr); };
+  g2.strokeStyle=C('--grid'); g2.lineWidth=1;
+  for(var d=Math.ceil(lgl); d<=Math.floor(lgh); d+=2){
+    g2.beginPath(); g2.moveTo(pl,Y(Math.pow(10,d))); g2.lineTo(W-pr,Y(Math.pow(10,d))); g2.stroke();
+    label(g2,'10'+String(d).replace('-','⁻').replace(/[0-9]/g,function(ch){return '⁰¹²³⁴⁵⁶⁷⁸⁹'[+ch];}), pl-6, Y(Math.pow(10,d))+4, C('--muted'),10,'end');
+  }
+  g2.strokeStyle=C('--axis'); g2.beginPath(); g2.moveTo(pl,H-pb); g2.lineTo(W-pr,H-pb); g2.stroke();
+  label(g2,'반복 k', W-pr, H-6, C('--muted'),10.5,'end');
+  label(g2,'손실', pl-6, pt+2, C('--muted'),10.5,'end');
+  runs.forEach(function(r){
+    g2.strokeStyle=r.col; g2.lineWidth=2; g2.beginPath();
+    for(var k=0;k<r.L.length;k++){
+      var yy=Y(r.L[k]); if(!isFinite(yy)) break;
+      yy=Math.max(-500,Math.min(500,yy));
+      if(k===0) g2.moveTo(X(k),yy); else g2.lineTo(X(k),yy);
+    }
+    g2.stroke();
+  });
+  var ids=['r4a','r4b','r4c'];
+  runs.forEach(function(r,i){
+    var v=r.L[r.L.length-1];
+    document.getElementById(ids[i]).textContent = (!isFinite(v))?'발산':v.toExponential(1);
+  });
+  var bs=Math.pow((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1),2);
+  document.getElementById('r4beta').textContent = bs.toFixed(3);
+  document.getElementById('r4rate').textContent =
+    ((kap-1)/(kap+1)).toFixed(3) + '  vs  ' + ((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1)).toFixed(3);
+}
+[s4k,s4n].forEach(function(el){ el.addEventListener('input',draw4); });
+
+/* ────────── boot ────────── */
+function drawAll(){ draw1(); draw2(); draw4(); }
+window.addEventListener('resize', function(){ drawAll(); });
+drawAll();
+})();
+</script>
+</body>
+</html>
