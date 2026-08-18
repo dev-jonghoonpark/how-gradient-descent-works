@@ -1,14 +1,29 @@
-# 경사 하강법 — 지그재그(진동)를 중심으로
+# how-gradient-descent-works
 
-경사 하강법(Gradient Descent)에서 나타나는 지그재그 진동 현상을 인터랙티브하게 살펴보는 단일 페이지 문서입니다.
-GD / Momentum / Adam 등의 동작 차이와 학습률, 조건수(condition number)에 따른 수렴·발산 양상을 시각화합니다.
+경사 하강법(Gradient Descent)은 왜 지그재그로 움직이는가 — 학습률·조건수에 따른 수렴과 발산, GD/Momentum/Adam의 차이를 브라우저에서 직접 실험하며 배우는 인터랙티브 교육 자료입니다.
 
-## 보기
+**🔗 데모: https://dev-jonghoonpark.github.io/how-gradient-descent-works/**
 
-https://dev-jonghoonpark.github.io/gradient-descent/
+> [how-ai-works](https://github.com/dev-jonghoonpark/how-ai-works) 시리즈의 일부입니다.
 
-## 구성
+## 다루는 내용
 
-- `index.html` — 외부 의존성 없는 단일 HTML 파일 (CSS·JS 인라인)
+| 절 | 주제 |
+|---|---|
+| §1 | 학습률 하나로 갈리는 네 가지 운명 (수렴·진동·발산) |
+| §2 | 비교 실험실 — GD / Momentum / Adam |
+| §3 | 지그재그는 왜 생기는가 — 축별 분해 |
+| §4 | 조건수 κ와 학습률의 딜레마 |
+| §5 | 처방 다섯 가지 |
+| §6 | 진단 가이드 — 증상에서 처방까지 |
+| §7 | 핵심 정리 카드 |
 
-로컬에서 볼 때는 파일을 브라우저로 바로 열면 됩니다.
+## 실행
+
+빌드 과정 없는 단일 `index.html`입니다. 브라우저로 열면 됩니다.
+
+```bash
+open index.html
+```
+
+모든 계산은 순수 JavaScript로 페이지 안에서 수행됩니다 — 외부 라이브러리·서버 없음.
