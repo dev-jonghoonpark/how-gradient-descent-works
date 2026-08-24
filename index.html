@@ -170,6 +170,7 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
     <li><a href="#lr">학습률 하나로 갈리는 네 가지 운명</a><span class="lvtag">입문</span></li>
     <li><a href="#l2">골짜기와 지그재그</a><span class="lvtag">학부</span></li>
     <li><a href="#why">지그재그는 왜 생기는가 — 축별 분해</a><span class="lvtag">학부</span></li>
+    <li><a href="#walk">숫자로 따라가기 — 한 예제의 10걸음</a><span class="lvtag">학부</span></li>
     <li><a href="#kappa">조건수 κ, 그리고 학습률의 딜레마</a><span class="lvtag">학부</span></li>
     <li><a href="#l3">최적 학습률과 수렴 속도의 한계</a><span class="lvtag">심화</span></li>
     <li><a href="#fix">처방 다섯 가지 — 정규화·모멘텀·적응·2차·스케줄</a><span class="lvtag">심화</span></li>
@@ -326,6 +327,149 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 </div>
 
 <div class="key"><span class="lbl">지그재그의 정체</span><p>지그재그는 알고리즘의 버그가 아니라 <strong>“가파른 축은 이미 과도하게, 완만한 축은 여전히 부족하게” 움직이는 상태</strong>입니다. 하나의 η로 서로 다른 곡률의 축들을 동시에 만족시킬 수 없기 때문에 생기는 구조적 갈등입니다. 진행은 완만한 축이 결정하고, 안정성은 가파른 축이 결정합니다.</p></div>
+
+<h3 id="walk">숫자로 따라가기 — 한 예제의 10걸음</h3>
+
+<p>지금까지의 이야기를 <strong>값을 하나 고정해</strong> 끝까지 계산해 봅시다. 아래 숫자는 전부 손으로 검산할 수 있을 만큼 단순하며, 데모 2를 <span class="math">κ<span class="op">=</span><span class="num">10</span></span>, <span class="math">η<span class="op">=</span><span class="num">1.6</span></span>으로 맞추면 같은 지형·같은 배율의 경로를 눈으로 볼 수 있습니다.</p>
+
+<div class="card">
+<strong>이번 예제의 설정</strong>
+<ul style="margin-bottom:0">
+<li><strong>지형</strong> <span class="math">L(x,y) <span class="op">=</span> ½(x<sup>2</sup>/<span class="num">10</span> <span class="op">+</span> y<sup>2</sup>)</span> → 곡률 <span class="math">λ<sub>x</sub> <span class="op">=</span> <span class="num">0.1</span></span>(완만), <span class="math">λ<sub>y</sub> <span class="op">=</span> <span class="num">1</span></span>(가파름), 따라서 <span class="math">κ <span class="op">=</span> <span class="num">10</span></span></li>
+<li><strong>시작점</strong> <span class="math">(x<sub>0</sub>, y<sub>0</sub>) <span class="op">=</span> (<span class="num">5</span>, <span class="num">2</span>)</span>, 초기 손실 <span class="math">L<sub>0</sub> <span class="op">=</span> <span class="num">3.25</span></span></li>
+<li><strong>학습률</strong> <span class="math">η <span class="op">=</span> <span class="num">1.6</span></span> — 안정 한계 <span class="math"><span class="num">2</span>/λ<sub>max</sub> <span class="op">=</span> <span class="num">2</span></span>보다는 작고, 진동이 시작되는 <span class="math"><span class="num">1</span>/λ<sub>max</sub> <span class="op">=</span> <span class="num">1</span></span>보다는 크다. 즉 <strong>“진동하며 수렴”하는 구간</strong>을 일부러 골랐습니다.</li>
+</ul>
+</div>
+
+<h4>첫 걸음을 손으로</h4>
+
+<p>기울기는 각 변수로 편미분하면 됩니다. <span class="math">∂L/∂x <span class="op">=</span> x/<span class="num">10</span></span>, <span class="math">∂L/∂y <span class="op">=</span> y</span>이므로 시작점에서 <span class="math">∇L <span class="op">=</span> (<span class="num">0.5</span>, <span class="num">2</span>)</span>입니다. 이제 갱신식에 그대로 넣습니다.</p>
+
+<div class="eq">
+<span class="math">x<sub>1</sub> <span class="op">=</span> <span class="num">5</span> <span class="op">−</span> <span class="num">1.6</span> × <span class="num">0.5</span> <span class="op">=</span> <span class="num">4.2</span></span>&nbsp;&nbsp;·&nbsp;&nbsp;
+<span class="math">y<sub>1</sub> <span class="op">=</span> <span class="num">2</span> <span class="op">−</span> <span class="num">1.6</span> × <span class="num">2</span> <span class="op">=</span> <span class="op">−</span><span class="num">1.2</span></span>
+<span class="note">y는 2만 내려가면 바닥인데 3.2를 갔다 → 1.2만큼 <strong>지나쳐서 반대편 벽</strong>에 붙었다</span>
+</div>
+
+<p>단 한 걸음에 지그재그의 씨앗이 심어졌습니다. 게다가 방향 자체가 어긋나 있습니다. 최솟값은 <em>왼쪽으로 5, 아래로 2</em> 떨어져 있는데, 그래디언트 반대 방향은 <em>왼쪽으로 0.5, 아래로 2</em>를 가리킵니다. 두 방향의 각도 차이는 <strong>약 54°</strong>. “가장 가파른 방향”이 “가야 할 방향”이 아니라는 말이 이 숫자입니다.</p>
+
+<div class="demo">
+  <h4>그림 A — 이 예제의 10걸음 경로</h4>
+  <p class="cap">점선은 시작점에서 <strong>최솟값을 향하는 방향</strong>, 파란 선은 <strong>실제 경로</strong>입니다. 첫 걸음(k=0→1)이 점선과 54° 어긋난 채 바닥을 지나쳐 반대편으로 넘어가고, 그때부터 경로가 톱니처럼 접힙니다. 숫자는 반복 횟수 k. <em>가로축이 확대되어 그려져 화면상 각도는 실제 값과 다릅니다.</em></p>
+  <canvas id="cwA" height="300"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>경사 하강법 경로 (η=1.6)</span>
+    <span><i style="background:var(--muted);height:1px"></i>등고선</span>
+    <span><i style="background:var(--text-secondary);height:1px"></i>최솟값 방향</span>
+  </div>
+</div>
+
+<p>두 번째 걸음부터는 계산을 반복할 필요도 없습니다. 축별로 <strong>배율 곱셈</strong>일 뿐이니까요.</p>
+
+<div class="eq">
+<span class="math">x<sub>k+1</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> <span class="num">1.6</span>×<span class="num">0.1</span>) x<sub>k</sub> <span class="op">=</span> <span class="num">0.84</span> x<sub>k</sub></span> &nbsp;&nbsp;·&nbsp;&nbsp;
+<span class="math">y<sub>k+1</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> <span class="num">1.6</span>×<span class="num">1</span>) y<sub>k</sub> <span class="op">=</span> <span class="op">−</span><span class="num">0.6</span> y<sub>k</sub></span>
+<span class="note">가로축 배율은 양수(부호 유지·느린 전진), 세로축 배율은 음수(매번 부호 뒤집힘 = 지그재그)</span>
+</div>
+
+<h4>10걸음 전체</h4>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">k</th><th class="num">x<sub>k</sub> <span style="font-weight:400">(완만)</span></th><th class="num">y<sub>k</sub> <span style="font-weight:400">(가파름)</span></th><th>y 부호</th><th class="num">∇L<sub>k</sub> = (x<sub>k</sub>/10, y<sub>k</sub>)</th><th class="num">L<sub>k</sub></th></tr></thead>
+<tbody>
+<tr class="hi"><td class="num">0</td><td class="num">5.0000</td><td class="num">2.0000</td><td>+</td><td class="num">(0.5000, 2.0000)</td><td class="num">3.2500</td></tr>
+<tr><td class="num">1</td><td class="num">4.2000</td><td class="num">−1.2000</td><td>−</td><td class="num">(0.4200, −1.2000)</td><td class="num">1.6020</td></tr>
+<tr><td class="num">2</td><td class="num">3.5280</td><td class="num">0.7200</td><td>+</td><td class="num">(0.3528, 0.7200)</td><td class="num">0.8815</td></tr>
+<tr><td class="num">3</td><td class="num">2.9635</td><td class="num">−0.4320</td><td>−</td><td class="num">(0.2964, −0.4320)</td><td class="num">0.5324</td></tr>
+<tr><td class="num">4</td><td class="num">2.4894</td><td class="num">0.2592</td><td>+</td><td class="num">(0.2489, 0.2592)</td><td class="num">0.3434</td></tr>
+<tr><td class="num">5</td><td class="num">2.0911</td><td class="num">−0.1555</td><td>−</td><td class="num">(0.2091, −0.1555)</td><td class="num">0.2307</td></tr>
+<tr><td class="num">6</td><td class="num">1.7565</td><td class="num">0.0933</td><td>+</td><td class="num">(0.1756, 0.0933)</td><td class="num">0.1586</td></tr>
+<tr><td class="num">7</td><td class="num">1.4755</td><td class="num">−0.0560</td><td>−</td><td class="num">(0.1475, −0.0560)</td><td class="num">0.1104</td></tr>
+<tr><td class="num">8</td><td class="num">1.2394</td><td class="num">0.0336</td><td>+</td><td class="num">(0.1239, 0.0336)</td><td class="num">0.0774</td></tr>
+<tr><td class="num">9</td><td class="num">1.0411</td><td class="num">−0.0202</td><td>−</td><td class="num">(0.1041, −0.0202)</td><td class="num">0.0544</td></tr>
+<tr class="hi"><td class="num">10</td><td class="num">0.8745</td><td class="num">0.0121</td><td>+</td><td class="num">(0.0875, 0.0121)</td><td class="num">0.0383</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>이 표에서 읽어야 할 것은 세 가지입니다.</p>
+
+<ol>
+<li><strong>y 열의 부호가 +, −, +, − 로 완벽하게 교대합니다.</strong> 크기는 매번 0.6배로 줄지만 방향은 매번 반대입니다. 화면에서 보이는 지그재그가 바로 이 열입니다.</li>
+<li><strong>x 열은 부호를 한 번도 바꾸지 않고 0.84배씩만 줄어듭니다.</strong> 진동은 없지만 답답합니다. 10걸음을 걸었는데 5에서 0.87까지밖에 못 왔습니다.</li>
+<li><strong>손실은 처음 두 걸음에 3.25 → 0.88로 73% 떨어진 뒤 급격히 둔해집니다.</strong> 초반 하락은 대부분 y가 정리되면서 생긴 것이고, y가 사라진 뒤에는 느린 x만 남기 때문입니다. 실제 학습 곡선에서 흔히 보는 “초반 급락 후 정체”가 이 구조입니다.</li>
+</ol>
+
+<div class="demo">
+  <h4>그림 B — 두 축의 값을 나란히</h4>
+  <p class="cap">같은 10걸음을 축별로 분리한 것입니다(가로축은 반복 k, 세로축은 좌표값). <span style="color:var(--s2);font-weight:650">y</span>는 0선을 매번 가로지르며 튕기고, <span style="color:var(--s3);font-weight:650">x</span>는 한 번도 0선을 넘지 않고 완만하게 미끄러집니다. <strong>지그재그는 주황 선, 학습이 끝나지 않는 이유는 초록 선</strong>입니다.</p>
+  <canvas id="cwB" height="260"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--s3)"></i>x<sub>k</sub> — 완만한 축 (λ=0.1)</span>
+    <span><i style="background:var(--s2)"></i>y<sub>k</sub> — 가파른 축 (λ=1)</span>
+  </div>
+</div>
+
+<p>수치로 확인하면 격차가 분명합니다. 10걸음 뒤 <strong>y는 처음의 0.6%</strong>까지 줄었지만 <strong>x는 아직 17.5%</strong>가 남아 있습니다. 각 축이 1/1000까지 줄어드는 데 필요한 걸음 수는 <span class="math">y</span>축이 <strong>14회</strong>, <span class="math">x</span>축이 <strong>40회</strong>입니다. 즉 <strong>전체 학습 시간의 3분의 2 가까이가 이미 조용해진 세로축을 데리고 가로축을 기다리는 시간</strong>입니다.</p>
+
+<h4>η를 바꿨다면 — 같은 지형, 다섯 가지 선택</h4>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">η</th><th class="num">가로 배율 1−η/10</th><th class="num">세로 배율 1−η</th><th class="num">1/1000 도달</th><th>무슨 일이 벌어지나</th></tr></thead>
+<tbody>
+<tr><td class="num">0.5</td><td class="num">+0.950</td><td class="num">+0.500</td><td class="num">135회</td><td>진동은 전혀 없다. 대신 가로축이 거의 멈춰 있어 <strong>가장 느리다</strong>.</td></tr>
+<tr><td class="num">1.0</td><td class="num">+0.900</td><td class="num">0.000</td><td class="num">66회</td><td>세로축이 <strong>단 한 걸음에 정확히 0</strong>. 지그재그가 완전히 사라지는데도 여전히 66회.</td></tr>
+<tr class="hi"><td class="num">1.6</td><td class="num">+0.840</td><td class="num">−0.600</td><td class="num">40회</td><td>세로축은 진동, 가로축은 전진. <strong>위 표의 예제.</strong></td></tr>
+<tr><td class="num">1.818</td><td class="num">+0.818</td><td class="num">−0.818</td><td class="num">35회</td><td>최적 <span class="math">η<sup>★</sup> <span class="op">=</span> <span class="num">2</span>/(<span class="num">0.1</span><span class="op">+</span><span class="num">1</span>)</span>. 두 배율의 절댓값이 같아지는 점 — <strong>가장 빠른데 진동은 가장 심하다.</strong></td></tr>
+<tr><td class="num">2.1</td><td class="num">+0.790</td><td class="num">−1.100</td><td class="num">발산</td><td>세로 배율의 절댓값이 1을 넘어 진폭이 매 걸음 1.1배로 커진다.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key"><span class="lbl">이 표가 말하는 것</span><p>η를 1.0으로 낮추면 지그재그는 <em>완전히</em> 없어집니다. 그런데 수렴은 오히려 <strong>1.9배 느려집니다</strong>(35회 → 66회). <strong>진동을 없애는 것과 빨리 수렴하는 것은 같은 목표가 아닙니다.</strong> 최적점 η<sup>★</sup>=1.818은 진동을 감수하고 고른 값이며, 거기서도 40걸음 남짓이 필요한 이유는 순전히 κ=10이라는 지형 탓입니다.</p></div>
+
+<div class="demo">
+  <h4>그림 C — η 다섯 개의 손실 곡선</h4>
+  <p class="cap">세로축은 로그 스케일입니다. 위 표를 그림으로 옮긴 것으로, <strong>기울기가 가파를수록 빠른 학습</strong>입니다. η=0.5(회색)는 매끈하지만 가장 완만하고, η=2.1(빨강)만 위로 치솟아 발산합니다. 진동하는 η=1.6·1.818이 오히려 아래쪽에 있다는 점을 보세요.</p>
+  <canvas id="cwC" height="250"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--muted)"></i>η=0.5 (진동 없음, 가장 느림)</span>
+    <span><i style="background:var(--s3)"></i>η=1.0 (진동 없음)</span>
+    <span><i style="background:var(--s1)"></i>η=1.6 (예제)</span>
+    <span><i style="background:var(--s2)"></i>η<sup>★</sup>=1.818 (최적)</span>
+    <span><i style="background:var(--s8)"></i>η=2.1 (발산)</span>
+  </div>
+</div>
+
+<h4>같은 예제에 모멘텀을 얹으면</h4>
+
+<p>이 지형의 이론적 최적값은 <span class="math">β<sup>★</sup> <span class="op">=</span> <span class="num">0.270</span></span>, <span class="math">η<sup>★</sup> <span class="op">=</span> <span class="num">2.309</span></span>입니다(κ=10이라 β가 관행값 0.9보다 훨씬 작습니다). 같은 시작점에서 손실을 나란히 놓으면 이렇습니다.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">k</th><th class="num">0</th><th class="num">2</th><th class="num">4</th><th class="num">5</th><th class="num">6</th><th class="num">8</th><th class="num">10</th></tr></thead>
+<tbody>
+<tr><td>경사 하강법 (η=1.6)</td><td class="num">3.250</td><td class="num">0.882</td><td class="num">0.343</td><td class="num">0.231</td><td class="num">0.159</td><td class="num">0.077</td><td class="num">0.0383</td></tr>
+<tr><td>모멘텀 (η<sup>★</sup>, β<sup>★</sup>)</td><td class="num">3.250</td><td class="num">2.726</td><td class="num">0.588</td><td class="num">0.232</td><td class="num">0.086</td><td class="num">0.011</td><td class="num">0.0012</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>초반 네 걸음은 모멘텀이 <strong>오히려 손해</strong>입니다. 관성 때문에 더 크게 넘어가 k=2에서는 손실이 3배 넘게 높습니다. 그러다 5번째 걸음에서 따라잡고, 10번째 걸음에서는 <strong>33배</strong> 앞섭니다. 모멘텀은 “첫 걸음을 잘 딛는 방법”이 아니라 <strong>“반복이 쌓일수록 유리해지는 방법”</strong>입니다. 몇 걸음만 보고 옵티마이저를 판단하면 안 되는 이유이기도 합니다.</p>
+
+<div class="demo">
+  <h4>그림 D — 경사 하강법 vs 모멘텀, 같은 시작점</h4>
+  <p class="cap">왼쪽은 경로, 오른쪽은 손실입니다. 모멘텀(주황)은 초반에 <strong>더 크게 넘어갔다가</strong> 진동이 스스로 상쇄되며 중심으로 빨려 들어갑니다. 오른쪽 그래프에서 두 선이 교차하는 5번째 걸음이 역전 지점입니다.</p>
+  <canvas id="cwD" height="270"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>경사 하강법 (η=1.6)</span>
+    <span><i style="background:var(--s2)"></i>모멘텀 (η<sup>★</sup>=2.309, β<sup>★</sup>=0.270)</span>
+  </div>
+</div>
+
+<div class="note">직접 확인해 보려면 <a href="#l2">데모 2</a>를 κ=10, η=1.6, β=0으로 맞춘 뒤 캔버스의 <strong>오른쪽 위(x≈5, y≈2)를 눌러 시작점을 옮기고</strong> ▶ 애니메이션을 누르세요. 데모 3의 위·아래 막대그래프가 각각 위 표의 x 열과 y 열에 대응합니다. 그다음 β만 0.27로 올리면 지그재그가 눌리는 모습이 보입니다. 마지막 모멘텀 비교(η<sup>★</sup>=2.309, β<sup>★</sup>=0.270)는 <a href="#cmp">데모 4</a>의 κ를 10으로 맞추면 같은 파라미터 그대로 재현됩니다.</div>
 
 <h3 id="kappa">조건수 κ와 학습률의 딜레마</h3>
 
@@ -889,8 +1033,216 @@ function draw4(){
 }
 [s4k,s4n].forEach(function(el){ el.addEventListener('input',draw4); });
 
+/* ══════════════ 예제 그림 A~D : κ=10, η=1.6, w₀=(5,2) ══════════════ */
+var WLX=0.1, WLY=1, WX0=5, WY0=2;
+function wrun(eta, beta, N){
+  var x=WX0, y=WY0, vx=0, vy=0;
+  var P=[{x:x,y:y}], L=[0.5*(WLX*x*x+WLY*y*y)];
+  for(var k=0;k<N;k++){
+    vx = beta*vx + WLX*x; vy = beta*vy + WLY*y;
+    x -= eta*vx; y -= eta*vy;
+    if(!isFinite(x)||!isFinite(y)) break;
+    P.push({x:x,y:y}); L.push(0.5*(WLX*x*x+WLY*y*y));
+  }
+  return {P:P, L:L};
+}
+function sup10(d){
+  return '10' + String(d).replace('-','⁻').replace(/[0-9]/g,function(ch){ return '⁰¹²³⁴⁵⁶⁷⁸⁹'[+ch]; });
+}
+function tag(g,t,x,y,col,size,align){
+  var s=size||11;
+  g.font=s+'px system-ui,-apple-system,sans-serif';
+  var tw=g.measureText(t).width;
+  var lx = align==='center' ? x-tw/2 : (align==='end' ? x-tw : x);
+  g.fillStyle=C('--surface-1'); g.globalAlpha=0.88;
+  g.fillRect(lx-4, y-s-1, tw+8, s+6);
+  g.globalAlpha=1;
+  label(g,t,x,y,col,s,align);
+}
+function ellipses(g,sx,sy,X0,X1,Y0,Y1,w,h,ytop,n){
+  g.strokeStyle=C('--grid'); g.lineWidth=1;
+  for(var i=1;i<=n;i++){
+    var b=ytop*i/n, a=Math.sqrt(1/WLX)*b;
+    g.beginPath();
+    g.ellipse(sx(0), sy(0), a/(X1-X0)*w, b/(Y1-Y0)*h, 0, 0, 6.2832);
+    g.stroke();
+  }
+}
+
+/* ── 그림 A : 경로 ── */
+var cwA=document.getElementById('cwA');
+function drawWA(){
+  var e=fit(cwA), g=e.g, w=e.w, h=e.h;
+  var narrow = w<560;
+  var X0=-1.8, X1=6.3, Y0=-2.7, Y1=2.7;
+  var sx=function(v){ return (v-X0)/(X1-X0)*w; };
+  var sy=function(v){ return h-(v-Y0)/(Y1-Y0)*h; };
+  ellipses(g,sx,sy,X0,X1,Y0,Y1,w,h,2.6,7);
+  g.strokeStyle=C('--axis'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,sy(0)); g.lineTo(w,sy(0)); g.stroke();
+  g.beginPath(); g.moveTo(sx(0),0); g.lineTo(sx(0),h); g.stroke();
+  if(narrow) label(g,'x (완만)', 6, h-8, C('--muted'), 11);
+  else label(g,'x — 완만한 축 (λ=0.1)', w-8, sy(0)+16, C('--muted'), 11, 'end');
+  label(g, narrow?'y (가파름)':'y — 가파른 축 (λ=1)', sx(0)+7, 15, C('--muted'), 11);
+
+  var P=wrun(1.6,0,10).P;
+
+  g.save(); g.setLineDash([5,4]); g.lineWidth=1.4; g.strokeStyle=C('--text-secondary');
+  g.beginPath(); g.moveTo(sx(WX0),sy(WY0)); g.lineTo(sx(0),sy(0)); g.stroke(); g.restore();
+  tag(g,'최솟값 방향 (54° 어긋남)', sx(2.6), sy(1.5), C('--text-secondary'), 11.5, 'center');
+  if(!narrow) tag(g,'첫 걸음 −η∇L', sx(5.12), sy(0.55), C('--s1'), 11.5);
+
+  g.strokeStyle=C('--s1'); g.lineWidth=2; g.lineJoin='round'; g.beginPath();
+  for(var j=0;j<P.length;j++){
+    var Xj=sx(P[j].x), Yj=sy(P[j].y);
+    if(j===0) g.moveTo(Xj,Yj); else g.lineTo(Xj,Yj);
+  }
+  g.stroke();
+  for(var m=0;m<P.length;m++){
+    var Xm=sx(P[m].x), Ym=sy(P[m].y);
+    dot(g,Xm,Ym, m===0?6.5:4, m===0?C('--text-primary'):C('--s1'), C('--surface-1'));
+    var showK = narrow ? (m<=3 || m===10) : (m<=6 || m===10);
+    if(showK) label(g,'k='+m, Xm, Ym+(P[m].y>=0?-11:17), C('--text-secondary'), 10.5, 'center');
+  }
+  dot(g,sx(0),sy(0),5.5,C('--surface-1'),C('--text-primary'));
+  label(g,'최솟값', sx(0)+11, sy(0)+19, C('--text-secondary'), 11);
+}
+
+/* ── 그림 B : 두 축의 수열 ── */
+var cwB=document.getElementById('cwB');
+function drawWB(){
+  var e=fit(cwB), g=e.g, w=e.w, h=e.h;
+  var pl=38, pr=14, pt=16, pb=26, N=10;
+  var vmin=-2.5, vmax=5.5;
+  var X=function(k){ return pl + k/N*(w-pl-pr); };
+  var Y=function(v){ return h-pb - (v-vmin)/(vmax-vmin)*(h-pb-pt); };
+  g.strokeStyle=C('--grid'); g.lineWidth=1;
+  for(var v=-2;v<=5;v++){
+    if(v===0) continue;
+    g.beginPath(); g.moveTo(pl,Y(v)); g.lineTo(w-pr,Y(v)); g.stroke();
+    label(g,String(v), pl-7, Y(v)+4, C('--muted'), 10, 'end');
+  }
+  g.strokeStyle=C('--axis'); g.lineWidth=1.7;
+  g.beginPath(); g.moveTo(pl,Y(0)); g.lineTo(w-pr,Y(0)); g.stroke();
+  label(g,'0', pl-7, Y(0)+4, C('--text-secondary'), 11, 'end');
+  for(var k=0;k<=N;k++) label(g, String(k), X(k), h-8, C('--muted'), 10, 'center');
+
+  var P=wrun(1.6,0,N).P;
+  [{key:'x',c:'--s3'},{key:'y',c:'--s2'}].forEach(function(S){
+    var col=C(S.c);
+    g.strokeStyle=col; g.lineWidth=2.2; g.lineJoin='round'; g.beginPath();
+    for(var i=0;i<P.length;i++){
+      if(i===0) g.moveTo(X(i),Y(P[i][S.key])); else g.lineTo(X(i),Y(P[i][S.key]));
+    }
+    g.stroke();
+    for(var i2=0;i2<P.length;i2++) dot(g,X(i2),Y(P[i2][S.key]),3.6,col,C('--surface-1'));
+  });
+  label(g,'x — 부호를 유지하며 0.84배씩', X(4.2), Y(3.55), C('--s3'), 11.5);
+  label(g,'y — 매 걸음 0선을 가로지름 (×−0.6)', X(3.4), Y(-1.75), C('--s2'), 11.5);
+}
+
+/* ── 그림 C : η별 손실 곡선 ── */
+var cwC=document.getElementById('cwC');
+function drawWC(){
+  var e=fit(cwC), g=e.g, w=e.w, h=e.h;
+  var N=30, pl=50, pr=14, pt=14, pb=26;
+  var cfg=[{eta:0.5,c:'--muted'},{eta:1.0,c:'--s3'},{eta:1.6,c:'--s1',bold:true},{eta:2/1.1,c:'--s2'},{eta:2.1,c:'--s8'}];
+  var runs=cfg.map(function(o){ var r=wrun(o.eta,0,N); r.col=C(o.c); r.bold=!!o.bold; return r; });
+  var hi=0, lo=Infinity;
+  runs.forEach(function(r){ r.L.forEach(function(v){ if(isFinite(v)&&v>0){ hi=Math.max(hi,v); lo=Math.min(lo,v); } }); });
+  if(!(hi>0)) hi=1;
+  lo=Math.max(lo,1e-8);
+  var lgl=Math.floor(Math.log10(lo)), lgh=Math.ceil(Math.log10(hi));
+  var Y=function(v){ var t=(Math.log10(Math.max(v,Math.pow(10,lgl)))-lgl)/(lgh-lgl); return h-pb-t*(h-pb-pt); };
+  var X=function(k){ return pl + k/N*(w-pl-pr); };
+  for(var d=lgl; d<=lgh; d++){
+    g.strokeStyle=C('--grid'); g.lineWidth=1;
+    g.beginPath(); g.moveTo(pl,Y(Math.pow(10,d))); g.lineTo(w-pr,Y(Math.pow(10,d))); g.stroke();
+    if((d-lgl)%2===0) label(g, sup10(d), pl-7, Y(Math.pow(10,d))+4, C('--muted'), 10, 'end');
+  }
+  g.strokeStyle=C('--axis'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(pl,h-pb); g.lineTo(w-pr,h-pb); g.stroke();
+  for(var k=0;k<=N;k+=5) label(g,String(k), X(k), h-8, C('--muted'), 10, 'center');
+  tag(g,'손실 L (로그) · 가로축 = 반복 k', pl+8, pt+12, C('--muted'), 10.5);
+  runs.forEach(function(r){
+    g.strokeStyle=r.col; g.lineWidth=r.bold?2.6:1.8; g.beginPath();
+    for(var k2=0;k2<r.L.length;k2++){
+      var yy=Y(r.L[k2]);
+      if(!isFinite(yy)) break;
+      yy=Math.max(-400,Math.min(400,yy));
+      if(k2===0) g.moveTo(X(k2),yy); else g.lineTo(X(k2),yy);
+    }
+    g.stroke();
+  });
+}
+
+/* ── 그림 D : GD vs 모멘텀 ── */
+var cwD=document.getElementById('cwD');
+function drawWD(){
+  var e=fit(cwD), g=e.g, w=e.w, h=e.h;
+  var narrow = w<560;
+  var N=12, gap=narrow?12:22, wL=Math.round((w-gap)*0.54), ox=wL+gap, wR=w-ox;
+  var BE=Math.pow((Math.sqrt(10)-1)/(Math.sqrt(10)+1),2);
+  var EM=4/Math.pow(Math.sqrt(WLX)+Math.sqrt(WLY),2);
+  var A=wrun(1.6,0,N), B=wrun(EM,BE,N);
+
+  /* 왼쪽 : 경로 */
+  var X0=-2.4, X1=6.3, Y0=-3.1, Y1=3.1, pt=12, pb=20;
+  var sx=function(v){ return (v-X0)/(X1-X0)*wL; };
+  var sy=function(v){ return (h-pb) - (v-Y0)/(Y1-Y0)*(h-pb-pt); };
+  g.save(); g.beginPath(); g.rect(0,0,wL,h); g.clip();
+  ellipses(g,sx,sy,X0,X1,Y0,Y1,wL,h-pb-pt,3.0,7);
+  g.strokeStyle=C('--axis'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,sy(0)); g.lineTo(wL,sy(0)); g.stroke();
+  g.beginPath(); g.moveTo(sx(0),pt); g.lineTo(sx(0),h-pb); g.stroke();
+  [{r:A,c:'--s1'},{r:B,c:'--s2'}].forEach(function(o){
+    var col=C(o.c), P=o.r.P;
+    g.strokeStyle=col; g.lineWidth=2; g.lineJoin='round'; g.beginPath();
+    for(var j=0;j<P.length;j++){
+      if(j===0) g.moveTo(sx(P[j].x),sy(P[j].y)); else g.lineTo(sx(P[j].x),sy(P[j].y));
+    }
+    g.stroke();
+    for(var m=0;m<P.length;m++) dot(g,sx(P[m].x),sy(P[m].y),3.2,col,null);
+  });
+  dot(g,sx(WX0),sy(WY0),6,C('--text-primary'),C('--surface-1'));
+  dot(g,sx(0),sy(0),5,C('--surface-1'),C('--text-primary'));
+  tag(g, narrow?'시작':'시작 (5, 2)', sx(WX0)-6, sy(WY0)-11, C('--text-secondary'), 11, 'end');
+  label(g,'경로', 6, pt+11, C('--muted'), 11.5);
+  g.restore();
+
+  /* 오른쪽 : 손실 */
+  var pl2=narrow?32:42, pr2=8;
+  var hi=0, lo=Infinity;
+  [A,B].forEach(function(r){ r.L.forEach(function(v){ if(isFinite(v)&&v>0){ hi=Math.max(hi,v); lo=Math.min(lo,v); } }); });
+  if(!(hi>0)) hi=1;
+  lo=Math.max(lo,1e-8);
+  var lgl=Math.floor(Math.log10(lo)), lgh=Math.ceil(Math.log10(hi));
+  var Y2=function(v){ var t=(Math.log10(Math.max(v,Math.pow(10,lgl)))-lgl)/(lgh-lgl); return h-pb-t*(h-pb-pt); };
+  var X2=function(k){ return ox + pl2 + k/N*(wR-pl2-pr2); };
+  for(var d=lgl; d<=lgh; d++){
+    g.strokeStyle=C('--grid'); g.lineWidth=1;
+    g.beginPath(); g.moveTo(ox+pl2,Y2(Math.pow(10,d))); g.lineTo(w-pr2,Y2(Math.pow(10,d))); g.stroke();
+    label(g, sup10(d), ox+pl2-7, Y2(Math.pow(10,d))+4, C('--muted'), 10, 'end');
+  }
+  g.strokeStyle=C('--axis'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(ox+pl2,h-pb); g.lineTo(w-pr2,h-pb); g.stroke();
+  for(var k3=0;k3<=N;k3+=(narrow?4:2)) label(g,String(k3), X2(k3), h-6, C('--muted'), 10, 'center');
+  tag(g, narrow?'손실 L':'손실 L (로그) · 가로축 = 반복 k', ox+pl2+6, pt+12, C('--muted'), 10.5);
+  g.save(); g.setLineDash([4,4]); g.strokeStyle=C('--muted'); g.lineWidth=1;
+  g.beginPath(); g.moveTo(X2(5),pt+18); g.lineTo(X2(5),h-pb); g.stroke(); g.restore();
+  tag(g, narrow?'k=5':'k=5 역전', X2(5)+5, pt+32, C('--muted'), 10.5);
+  [{r:A,c:'--s1'},{r:B,c:'--s2'}].forEach(function(o){
+    g.strokeStyle=C(o.c); g.lineWidth=2.2; g.beginPath();
+    for(var k4=0;k4<o.r.L.length;k4++){
+      var yy=Y2(o.r.L[k4]);
+      if(k4===0) g.moveTo(X2(k4),yy); else g.lineTo(X2(k4),yy);
+    }
+    g.stroke();
+  });
+}
+
 /* ────────── boot ────────── */
-function drawAll(){ draw1(); draw2(); draw4(); }
+function drawAll(){ draw1(); draw2(); draw4(); drawWA(); drawWB(); drawWC(); drawWD(); }
 window.addEventListener('resize', function(){ drawAll(); });
 drawAll();
 })();
