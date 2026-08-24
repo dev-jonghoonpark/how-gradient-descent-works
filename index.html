@@ -170,8 +170,8 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
     <li><a href="#lr">학습률 하나로 갈리는 네 가지 운명</a><span class="lvtag">입문</span></li>
     <li><a href="#l2">골짜기와 지그재그</a><span class="lvtag">학부</span></li>
     <li><a href="#why">지그재그는 왜 생기는가 — 축별 분해</a><span class="lvtag">학부</span></li>
-    <li><a href="#walk">숫자로 따라가기 — 한 예제의 10걸음</a><span class="lvtag">학부</span></li>
     <li><a href="#kappa">조건수 κ, 그리고 학습률의 딜레마</a><span class="lvtag">학부</span></li>
+    <li><a href="#walk">숫자로 따라가기 — 한 예제의 10걸음</a><span class="lvtag">학부</span></li>
     <li><a href="#l3">최적 학습률과 수렴 속도의 한계</a><span class="lvtag">심화</span></li>
     <li><a href="#fix">처방 다섯 가지 — 정규화·모멘텀·적응·2차·스케줄</a><span class="lvtag">심화</span></li>
     <li><a href="#cmp">비교 실험실 · 진단 가이드</a><span class="lvtag">종합</span></li>
@@ -203,6 +203,34 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 <span class="math">w<sub>k+1</sub> <span class="op">=</span> w<sub>k</sub> <span class="op">−</span> η·2w<sub>k</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> <span class="num">2</span>η) w<sub>k</sub></span>
 <span class="note">매 반복마다 위치에 (1 − 2η)가 곱해진다 → 이 값의 부호와 크기가 모든 것을 결정한다</span>
 </div>
+
+<h4>먼저, 손으로 계산되는 예제 하나</h4>
+
+<p>슬라이더를 만지기 전에 숫자를 직접 따라가 봅시다. 출발점은 <span class="math">w<sub>0</sub> <span class="op">=</span> <span class="num">1</span></span>, 학습률은 <span class="math">η <span class="op">=</span> <span class="num">0.1</span></span>. 필요한 것은 곱셈뿐입니다.</p>
+
+<div class="eq">
+<span class="math">L′(<span class="num">1</span>) <span class="op">=</span> <span class="num">2</span><span class="op">×</span><span class="num">1</span> <span class="op">=</span> <span class="num">2</span></span>&nbsp;&nbsp;→&nbsp;&nbsp;
+<span class="math">w<sub>1</sub> <span class="op">=</span> <span class="num">1</span> <span class="op">−</span> <span class="num">0.1</span><span class="op">×</span><span class="num">2</span> <span class="op">=</span> <span class="num">0.8</span></span>
+<span class="note">기울기 2는 “올라가는 방향”이니 반대로 간다 · 한 걸음의 폭은 η × 기울기 = 0.2</span>
+</div>
+
+<p>두 번째 걸음부터는 미분을 다시 할 필요조차 없습니다. 위 식대로 배율 <span class="math"><span class="num">1</span><span class="op">−</span><span class="num">2</span>η <span class="op">=</span> <span class="num">0.8</span></span>을 <strong>계속 곱하기만</strong> 하면 됩니다.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">k</th><th class="num">w<sub>k</sub></th><th>어떻게 나왔나</th><th class="num">손실 <span style="font-weight:400">L = w<sub>k</sub><sup>2</sup></span></th></tr></thead>
+<tbody>
+<tr class="hi"><td class="num">0</td><td class="num">1</td><td>출발점</td><td class="num">1</td></tr>
+<tr><td class="num">1</td><td class="num">0.8</td><td><span class="math"><span class="num">0.8</span><span class="op">×</span><span class="num">1</span></span></td><td class="num">0.64</td></tr>
+<tr><td class="num">2</td><td class="num">0.64</td><td><span class="math"><span class="num">0.8</span><span class="op">×</span><span class="num">0.8</span></span></td><td class="num">0.4096</td></tr>
+<tr><td class="num">3</td><td class="num">0.512</td><td><span class="math"><span class="num">0.8</span><span class="op">×</span><span class="num">0.64</span></span></td><td class="num">0.262</td></tr>
+<tr><td class="num">4</td><td class="num">0.4096</td><td><span class="math"><span class="num">0.8</span><span class="op">×</span><span class="num">0.512</span></span></td><td class="num">0.168</td></tr>
+<tr class="hi"><td class="num">5</td><td class="num">0.32768</td><td><span class="math"><span class="num">0.8</span><span class="op">×</span><span class="num">0.4096</span></span></td><td class="num">0.107</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key"><span class="lbl">여기까지가 경사 하강법의 전부</span><p>위치는 매 걸음 <strong>0.8배</strong>, 손실은 <strong>0.64배</strong>(= 0.8<sup>2</sup>)씩 줄어듭니다. 바닥(0)에 <em>정확히</em> 닿지는 못하고 한없이 가까워질 뿐입니다. 손실이 절반이 되는 데 약 <strong>1.6걸음</strong>이 걸리니 10걸음이면 대략 <span class="math"><span class="num">1</span>/<span class="num">100</span></span>이 됩니다. 아래 슬라이더로 이 0.8을 직접 바꿔 보세요.</p></div>
 
 <div class="demo">
   <h4>데모 1 — 학습률 슬라이더</h4>
@@ -245,6 +273,23 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 </tbody>
 </table>
 </div>
+
+<p>이 네 줄이 실제로 어떤 숫자인지, <strong>모두 같은 출발점 <span class="math">w<sub>0</sub><span class="op">=</span><span class="num">1</span></span></strong>에서 나란히 놓아 봅시다. 하는 일은 앞의 표와 똑같습니다 — 배율 <span class="math">r</span>을 계속 곱할 뿐입니다.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">η</th><th class="num">배율 r</th><th class="num">w<sub>0</sub></th><th class="num">w<sub>1</sub></th><th class="num">w<sub>2</sub></th><th class="num">w<sub>3</sub></th><th class="num">w<sub>4</sub></th><th>무슨 일이 벌어지나</th></tr></thead>
+<tbody>
+<tr><td class="num">0.1</td><td class="num">+0.8</td><td class="num">1</td><td class="num">0.8</td><td class="num">0.64</td><td class="num">0.512</td><td class="num">0.4096</td><td>부호 그대로, 한쪽에서만 접근</td></tr>
+<tr class="hi"><td class="num">0.5</td><td class="num">0</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td><strong>한 걸음에 정확히 바닥</strong></td></tr>
+<tr><td class="num">0.9</td><td class="num">−0.8</td><td class="num">1</td><td class="num">−0.8</td><td class="num">0.64</td><td class="num">−0.512</td><td class="num">0.4096</td><td>매번 반대편으로 넘어가되 진폭은 줄어듦</td></tr>
+<tr><td class="num">1.0</td><td class="num">−1</td><td class="num">1</td><td class="num">−1</td><td class="num">1</td><td class="num">−1</td><td class="num">1</td><td>영원히 두 점 왕복</td></tr>
+<tr><td class="num">1.2</td><td class="num">−1.4</td><td class="num">1</td><td class="num">−1.4</td><td class="num">1.96</td><td class="num">−2.744</td><td class="num">3.8416</td><td>진폭이 커지며 튕겨 나감</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key"><span class="lbl">첫째 줄과 셋째 줄을 비교해 보세요</span><p><span class="math">η<span class="op">=</span><span class="num">0.1</span></span>과 <span class="math">η<span class="op">=</span><span class="num">0.9</span></span>는 <strong>부호만 다르고 크기가 완전히 같습니다</strong>(0.8, 0.64, 0.512 …). 배율이 각각 <span class="math"><span class="op">+</span><span class="num">0.8</span></span>과 <span class="math"><span class="op">−</span><span class="num">0.8</span></span>이기 때문입니다. 학습률을 <strong>아홉 배</strong>로 키웠는데 수렴 속도는 조금도 빨라지지 않고, 요란하게 진동만 하게 된 것입니다. 즉 <strong>“진동한다”와 “느리다”는 서로 다른 문제</strong>입니다. 가장 빠른 값은 그 둘 사이인 <span class="math">η<span class="op">=</span><span class="num">0.5</span></span>이고, 여기서 배율이 0이 되어 단 한 걸음에 끝납니다.</p></div>
 
 <div class="key"><span class="lbl">첫 번째 통찰</span><p>진동은 학습률이 <em>조금 큰</em> 상태, 발산은 <em>많이 큰</em> 상태입니다. 둘은 종류가 다른 고장이 아니라 <strong>같은 축 위의 정도 차이</strong>입니다. 그래서 손실 곡선이 톱니처럼 흔들리기 시작하면 “곧 터질 수도 있다”는 조기 경보로 읽어야 합니다.</p></div>
 
@@ -328,9 +373,29 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 
 <div class="key"><span class="lbl">지그재그의 정체</span><p>지그재그는 알고리즘의 버그가 아니라 <strong>“가파른 축은 이미 과도하게, 완만한 축은 여전히 부족하게” 움직이는 상태</strong>입니다. 하나의 η로 서로 다른 곡률의 축들을 동시에 만족시킬 수 없기 때문에 생기는 구조적 갈등입니다. 진행은 완만한 축이 결정하고, 안정성은 가파른 축이 결정합니다.</p></div>
 
+<h3 id="kappa">조건수 κ와 학습률의 딜레마</h3>
+
+<p>두 축의 곡률 비율을 <strong>조건수(condition number)</strong>라 부릅니다.</p>
+
+<div class="eq">
+<span class="math">κ <span class="op">=</span> <span class="frac"><span class="n">λ<sub>max</sub></span><span class="d">λ<sub>min</sub></span></span></span>
+<span class="note">κ = 1이면 완벽한 원형 그릇, κ가 클수록 좁고 긴 협곡 (ill-conditioned)</span>
+</div>
+
+<p>이제 딜레마가 선명해집니다.</p>
+
+<ul>
+  <li><strong>안정성 제약:</strong> 발산하지 않으려면 <span class="math">η &lt; <span class="num">2</span>/λ<sub>max</sub></span> — <em>가장 가파른</em> 축이 상한을 정합니다.</li>
+  <li><strong>속도 제약:</strong> 실제 수렴 속도는 <span class="math">|<span class="num">1</span> <span class="op">−</span> ηλ<sub>min</sub>|</span> — <em>가장 완만한</em> 축이 발목을 잡습니다.</li>
+</ul>
+
+<p>η를 λ<sub>max</sub>에 맞추면 λ<sub>min</sub> 방향은 <span class="math">ηλ<sub>min</sub> ≈ <span class="num">2</span>/κ</span>만큼만 줄어들어 κ가 클수록 기어갑니다. 반대로 λ<sub>min</sub>에 맞춰 η를 키우면 λ<sub>max</sub> 방향이 폭발합니다. <strong>κ가 곧 문제의 난이도</strong>인 셈입니다.</p>
+
+<div class="note">실제 신경망에서 κ는 흔히 10³~10⁶에 이릅니다. 입력 특징의 스케일이 제각각이거나(예: 나이 0–100 vs 소득 0–10⁸), 층이 깊어 그래디언트 크기가 층마다 크게 다를 때 κ가 급격히 커집니다.</div>
+
 <h3 id="walk">숫자로 따라가기 — 한 예제의 10걸음</h3>
 
-<p>지금까지의 이야기를 <strong>값을 하나 고정해</strong> 끝까지 계산해 봅시다. 아래 숫자는 전부 손으로 검산할 수 있을 만큼 단순하며, 데모 2를 <span class="math">κ<span class="op">=</span><span class="num">10</span></span>, <span class="math">η<span class="op">=</span><span class="num">1.6</span></span>으로 맞추면 같은 지형·같은 배율의 경로를 눈으로 볼 수 있습니다.</p>
+<p><a href="#lr">LEVEL 1의 1차원 예제</a>에 <strong>축을 하나 더한 것</strong>이 이번 예제입니다. 달라지는 것은 딱 하나 — 두 축의 곡률이 다르다는 점, 즉 <span class="math">κ <span class="op">&gt;</span> <span class="num">1</span></span>입니다. 앞에서는 배율이 <span class="math"><span class="num">1</span><span class="op">−</span><span class="num">2</span>η</span> 하나뿐이었지만, 이제는 <strong>축마다 배율이 따로</strong> 생깁니다. 아래 숫자는 전부 손으로 검산할 수 있으며, 데모 2를 <span class="math">κ<span class="op">=</span><span class="num">10</span></span>, <span class="math">η<span class="op">=</span><span class="num">1.6</span></span>으로 맞추면 같은 경로를 눈으로 볼 수 있습니다.</p>
 
 <div class="card">
 <strong>이번 예제의 설정</strong>
@@ -376,19 +441,19 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 
 <div class="tw">
 <table>
-<thead><tr><th class="num">k</th><th class="num">x<sub>k</sub> <span style="font-weight:400">(완만)</span></th><th class="num">y<sub>k</sub> <span style="font-weight:400">(가파름)</span></th><th>y 부호</th><th class="num">∇L<sub>k</sub> = (x<sub>k</sub>/10, y<sub>k</sub>)</th><th class="num">L<sub>k</sub></th></tr></thead>
+<thead><tr><th class="num">k</th><th class="num">x<sub>k</sub> <span style="font-weight:400">완만 · 매번 ×0.84</span></th><th class="num">y<sub>k</sub> <span style="font-weight:400">가파름 · 매번 ×(−0.6)</span></th><th class="num">손실 L<sub>k</sub></th></tr></thead>
 <tbody>
-<tr class="hi"><td class="num">0</td><td class="num">5.0000</td><td class="num">2.0000</td><td>+</td><td class="num">(0.5000, 2.0000)</td><td class="num">3.2500</td></tr>
-<tr><td class="num">1</td><td class="num">4.2000</td><td class="num">−1.2000</td><td>−</td><td class="num">(0.4200, −1.2000)</td><td class="num">1.6020</td></tr>
-<tr><td class="num">2</td><td class="num">3.5280</td><td class="num">0.7200</td><td>+</td><td class="num">(0.3528, 0.7200)</td><td class="num">0.8815</td></tr>
-<tr><td class="num">3</td><td class="num">2.9635</td><td class="num">−0.4320</td><td>−</td><td class="num">(0.2964, −0.4320)</td><td class="num">0.5324</td></tr>
-<tr><td class="num">4</td><td class="num">2.4894</td><td class="num">0.2592</td><td>+</td><td class="num">(0.2489, 0.2592)</td><td class="num">0.3434</td></tr>
-<tr><td class="num">5</td><td class="num">2.0911</td><td class="num">−0.1555</td><td>−</td><td class="num">(0.2091, −0.1555)</td><td class="num">0.2307</td></tr>
-<tr><td class="num">6</td><td class="num">1.7565</td><td class="num">0.0933</td><td>+</td><td class="num">(0.1756, 0.0933)</td><td class="num">0.1586</td></tr>
-<tr><td class="num">7</td><td class="num">1.4755</td><td class="num">−0.0560</td><td>−</td><td class="num">(0.1475, −0.0560)</td><td class="num">0.1104</td></tr>
-<tr><td class="num">8</td><td class="num">1.2394</td><td class="num">0.0336</td><td>+</td><td class="num">(0.1239, 0.0336)</td><td class="num">0.0774</td></tr>
-<tr><td class="num">9</td><td class="num">1.0411</td><td class="num">−0.0202</td><td>−</td><td class="num">(0.1041, −0.0202)</td><td class="num">0.0544</td></tr>
-<tr class="hi"><td class="num">10</td><td class="num">0.8745</td><td class="num">0.0121</td><td>+</td><td class="num">(0.0875, 0.0121)</td><td class="num">0.0383</td></tr>
+<tr class="hi"><td class="num">0</td><td class="num">5.000</td><td class="num">2.000</td><td class="num">3.250</td></tr>
+<tr><td class="num">1</td><td class="num">4.200</td><td class="num">−1.200</td><td class="num">1.602</td></tr>
+<tr><td class="num">2</td><td class="num">3.528</td><td class="num">0.720</td><td class="num">0.882</td></tr>
+<tr><td class="num">3</td><td class="num">2.964</td><td class="num">−0.432</td><td class="num">0.532</td></tr>
+<tr><td class="num">4</td><td class="num">2.489</td><td class="num">0.259</td><td class="num">0.343</td></tr>
+<tr><td class="num">5</td><td class="num">2.091</td><td class="num">−0.156</td><td class="num">0.231</td></tr>
+<tr><td class="num">6</td><td class="num">1.756</td><td class="num">0.093</td><td class="num">0.159</td></tr>
+<tr><td class="num">7</td><td class="num">1.475</td><td class="num">−0.056</td><td class="num">0.110</td></tr>
+<tr><td class="num">8</td><td class="num">1.239</td><td class="num">0.034</td><td class="num">0.077</td></tr>
+<tr><td class="num">9</td><td class="num">1.041</td><td class="num">−0.020</td><td class="num">0.054</td></tr>
+<tr class="hi"><td class="num">10</td><td class="num">0.875</td><td class="num">0.012</td><td class="num">0.038</td></tr>
 </tbody>
 </table>
 </div>
@@ -470,26 +535,6 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 </div>
 
 <div class="note">직접 확인해 보려면 <a href="#l2">데모 2</a>를 κ=10, η=1.6, β=0으로 맞춘 뒤 캔버스의 <strong>오른쪽 위(x≈5, y≈2)를 눌러 시작점을 옮기고</strong> ▶ 애니메이션을 누르세요. 데모 3의 위·아래 막대그래프가 각각 위 표의 x 열과 y 열에 대응합니다. 그다음 β만 0.27로 올리면 지그재그가 눌리는 모습이 보입니다. 마지막 모멘텀 비교(η<sup>★</sup>=2.309, β<sup>★</sup>=0.270)는 <a href="#cmp">데모 4</a>의 κ를 10으로 맞추면 같은 파라미터 그대로 재현됩니다.</div>
-
-<h3 id="kappa">조건수 κ와 학습률의 딜레마</h3>
-
-<p>두 축의 곡률 비율을 <strong>조건수(condition number)</strong>라 부릅니다.</p>
-
-<div class="eq">
-<span class="math">κ <span class="op">=</span> <span class="frac"><span class="n">λ<sub>max</sub></span><span class="d">λ<sub>min</sub></span></span></span>
-<span class="note">κ = 1이면 완벽한 원형 그릇, κ가 클수록 좁고 긴 협곡 (ill-conditioned)</span>
-</div>
-
-<p>이제 딜레마가 선명해집니다.</p>
-
-<ul>
-  <li><strong>안정성 제약:</strong> 발산하지 않으려면 <span class="math">η &lt; <span class="num">2</span>/λ<sub>max</sub></span> — <em>가장 가파른</em> 축이 상한을 정합니다.</li>
-  <li><strong>속도 제약:</strong> 실제 수렴 속도는 <span class="math">|<span class="num">1</span> <span class="op">−</span> ηλ<sub>min</sub>|</span> — <em>가장 완만한</em> 축이 발목을 잡습니다.</li>
-</ul>
-
-<p>η를 λ<sub>max</sub>에 맞추면 λ<sub>min</sub> 방향은 <span class="math">ηλ<sub>min</sub> ≈ <span class="num">2</span>/κ</span>만큼만 줄어들어 κ가 클수록 기어갑니다. 반대로 λ<sub>min</sub>에 맞춰 η를 키우면 λ<sub>max</sub> 방향이 폭발합니다. <strong>κ가 곧 문제의 난이도</strong>인 셈입니다.</p>
-
-<div class="note">실제 신경망에서 κ는 흔히 10³~10⁶에 이릅니다. 입력 특징의 스케일이 제각각이거나(예: 나이 0–100 vs 소득 0–10⁸), 층이 깊어 그래디언트 크기가 층마다 크게 다를 때 κ가 급격히 커집니다.</div>
 
 <!-- ═══════════════════════ LEVEL 3 ═══════════════════════ -->
 <h2 id="l3"><span class="lv lv3"><span class="dot"></span>LEVEL 3 · 심화</span><br>최적 학습률과 수렴 속도의 한계</h2>
