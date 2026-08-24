@@ -124,7 +124,7 @@ sub,sup{font-size:0.72em;font-style:normal}
 
 /* ---- tables ---- */
 .tw{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface-1)}
-table{border-collapse:collapse;width:100%;font-size:14px}
+table{border-collapse:collapse;min-width:100%;font-size:14px}
 th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
 th{font-weight:650;font-size:12.5px;color:var(--text-secondary);letter-spacing:0.02em;background:var(--page)}
 tr:last-child td{border-bottom:none}
@@ -197,7 +197,7 @@ footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--border);color
 <!-- ── 1D DEMO ── -->
 <h2 id="lr">학습률 하나로 갈리는 네 가지 운명</h2>
 
-<p>가장 단순한 그릇 <span class="math">L(w) <span class="op">=</span> w<sup>2</sup></span>을 봅시다. 기울기는 <span class="math">2w</span>이므로 갱신식은 아래처럼 <em>곱셈</em> 한 번으로 정리됩니다. 이 한 줄이 뒤에 나올 모든 이야기의 씨앗입니다.</p>
+<p>가장 단순한 그릇 <span class="math">L(w) <span class="op">=</span> w<sup>2</sup></span>을 봅시다. 여기서 <span class="math">w</span>는 <strong>모델의 파라미터</strong>(위 비유에서 "내가 선 위치")이고, <span class="math">L</span>은 <strong>손실</strong>("산의 높이")입니다. <span class="math">w <span class="op">=</span> <span class="num">0</span></span>일 때 손실이 0으로 가장 낮으니, 바닥은 원점입니다. 기울기는 <span class="math">2w</span>이므로 갱신식은 아래처럼 <em>곱셈</em> 한 번으로 정리됩니다. 이 한 줄이 뒤에 나올 모든 이야기의 씨앗입니다.</p>
 
 <div class="eq">
 <span class="math">w<sub>k+1</sub> <span class="op">=</span> w<sub>k</sub> <span class="op">−</span> η·2w<sub>k</sub> <span class="op">=</span> (<span class="num">1</span> <span class="op">−</span> <span class="num">2</span>η) w<sub>k</sub></span>
